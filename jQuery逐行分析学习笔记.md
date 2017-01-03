@@ -1,0 +1,327 @@
+#jQuery逐行分析学习笔记
+
+##jQuery整体架构
+
+以jQuery v2.0.3为例
+
+
+```js
+(function(){
+
+	(21, 94) 定义了一些变量和函数 jQuery = function(){};
+	
+	(96, 283) 给JQ对象添加一些方法和属性
+
+	(285, 347) extend : JQ的继承方法
+
+	(349, 817) jQuery.extend() : 扩展一些工具方法
+
+	(877, 2856) Sizzle : 复杂选择器的实现
+
+	(2880, 3042) Callbacks : 回调对象：对函数的统一管理
+
+	(3043, 3183) Deferred : 延迟对象：对异步的统一管理
+
+	(3184, 3295) support : 功能检测
+
+	(3308, 3652) data() : 数据缓存
+
+	(3653, 3797) queue() : 队列管理
+
+	(3803, 4299) attr() prop() val() addClass等 : 对元素属性的操作
+
+	(4300, 5128) on() trigger() : 事件操作的相关方法
+
+	(5140, 6057) DOM操作 : 添加 删除 获取 包装 DOM筛选
+
+	(6058, 6620) css() : 样式的操作
+
+	(6621, 7854) 提交的数据和ajax() : ajax() load() getJson()
+
+	(7855, 8584) animate() : 运动的方法
+	
+	(8585, 8792) offset() : 位置和尺寸的方法
+
+	(8802, 8821) JQ支持模块化的模式 
+
+	(8826) window.jQuery = window.$ = jQuery;
+
+})()
+```
+
+##jQuery逐行解析
+
+###(21, 94) 定义了一些变量和函数 jQuery = function(){};
+	
+
+```js
+//匿名函数自执行传入window的好处
+
+(function(window){
+	//window
+	//1. 找到window更快，不需要一层一层地找最外层的window
+	//2. 有利于压缩代码，例如：(function(w){ 在这里用w即可 })(window)
+})(window)
+```
+
+```js
+//匿名函数为什么要传入undefined
+
+function(window, undefined){
+	//undefined在外面是window下的一个属性，如果不传入的话，有被修改的风险
+	//在里面用undefined的时候，先找参数undefined，而不会找外面的
+})(window)
+```
+
+```js
+"use strict";
+
+//js的严格模式，写代码要十分规范
+```
+
+```js
+//对undefined的判断
+window.a == undefined; //在IE9中 tyoeof xmlNode.method用这种方法检查不出来
+typeof a == 'undefined'; //用这种方式检查比较保险
+```
+
+变量名防冲突
+
+```js
+var $ = 10;
+
+//如果外面对$或jQuery进行过定义了，那么来到jQuery内部的时候走下面两句：
+var _jQuery = window.jQuery,
+    _$ = window.$, //此处就将在外部定义的$的值赋给了_$，以防止与内部的$冲突。
+//如果在外部没有对$或jQuery进行过其他定义，那么这里的_jQuery和_$存的就是undefined
+```
+
+jQuery实现链式操作的原理
+
+```js
+jQuery = function(selector, context) {
+	return new jQuery.fn.init(selector, context, rootjQuery);
+}
+
+//jQuery函数返回的是一个对象，jQuery.fn.init才是真正的构造函数
+
+//...
+
+jQuery.fn = jQuery.prototype = { //jQuery.fn就是jQuery的原型
+	//...
+}
+
+/*
+一般的面向对象的写法：
+function Aaa(){}
+Aaa.prototype.init = function(){};
+Aaa.prototype.css = function(){};
+
+var a1 = new Aaa();
+a1.init();
+a1.css();
+*/
+
+//jQuery的return new jQuery.fn.init()，直接在创建对象的时候，就将init函数执行掉了
+
+//...
+jQuery.fn.init.prototype = jQuery.fn; //jQuery.fn.init的原型就是jQuery的原型，所以可以用new
+```
+
+匹配数字的正则
+
+```js
+core_pnum = /[+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|)/.source,
+
+//包含正负号、小数点、科学计数法
+```
+
+匹配标签或id
+
+```js
+rquickExpr = /^(?:\s*(<[\w\W]+>)[^>]*|#([\w-]*))$/
+
+//例如 <p>aaaa 或#div1
+```
+
+匹配成对标签
+
+```js
+rsingleTag = /^<(\w+)\s*\/?>(?:<\/\1>|)$/
+
+//例如 <p></p> <div></div> 或 <img />
+```
+
+匹配厂商前缀：
+
+以margin-left为例，webkit会转成webkitMarginLeft，但是对于IE来说却是例外，要写成 MsMarginLeft，注意这里的首字母M大写了。
+
+###(96, 283) 给JQ对象添加一些方法和属性
+
+该部分简化的代码：
+
+```js
+jQuery.fn = jQuery.prototype = { //添加实例属性和方法
+	jquery: 版本
+	constructor: 修正指向问题
+	init(): 初始化和参数管理
+	selector: 存储选择字符串
+	length: this对象的长度
+	toArray(): 转数组
+	get(): 转原声集合
+	pushStatck(): JQ对象的入栈
+	each(): 遍历集合
+	ready(): DOM加载的接口
+	slice(): 集合的截取
+	first(): 集合的第一项
+	last(): 集合的最后一项
+	eq(): 集合的指定项
+	map(): 返回新集合
+	end(): 返回集合前一个状态
+	push(): (内部使用)
+	sort(): (内部使用)
+	splice(): (内部使用)
+}
+```
+
+了解constructor
+
+```js
+function Aaa(){}
+//当构造函数生成之后，js源码中会自动在其prototype下面生成一个constructor，指向这个构造函数
+//相当于执行了一句 Aaa.prototype.constructor = Aaa;
+var a1 = new Aaa();
+alert(a1.constructor); //function Aaa(){...}
+
+//在面向对象的写法当中，以下两种写法大有不同，第二种写法会一不小心就改掉了constructor属性
+
+Aaa.prototype.name = 'hello'; //添加写法
+Aaa.prototype.age = 30;
+
+Aaa.prototype = { //覆盖写法 这个时候就需要constructor的修正
+	//修正 constructor: Aaa,
+	name: 'hello',
+	age: 30
+};
+```
+
+jQuery中的init需要处理的各种情况
+
+- selector为字符串时
+	- $(""), $(null), $(undefined), $(false)
+	- $('#div1') $('.box') $('div') $('#div1 div.box')
+	- $('<li>') $('<li>1</li><li>2</li>') 创建标签的写法
+- selector为元素的时候
+	- $(this) $(document)
+- selector为函数的时候
+	- $(function(){})
+- $([]) $({}) 
+
+在jQuery源码中，是这样判断的：
+
+```js
+if (){
+	//$('<li>') $('<li>1</li><li>2</li>')
+
+	//match = [null, '<li>', null]; 或
+	//match = [null, '<li>1</li><li>2</li>', null]
+} else {
+	//$('#div1') $('.box') $('div') $('#div1 div.box')
+	//$('<li>hello') -> 例如 $('<li>hello').appendTo($('ul'));  这个时候只能添加li，但是hello却添加不了，所以它也相当于$('<li>')
+
+	//当为$('#div1')和$('<li>hello')的时候，match通过rquickExpr.exec(selector)可以匹配成这样：
+	//匹配id的时候，match = ['#div1', null, 'div1'];
+	//匹配$('<li>hello')的时候，match = ['<li>hello', '<li>', null]
+
+	//但是$('.box') $('div') $('#div1 div.box') 这些的时候，正则匹配不到，所以 match = null;
+
+	//总结下来：
+	/*
+	match = null; //$('.box') $('div') $('#div1 div.box')
+	match = ['#div1', null, 'div1']; //$('#div1')
+	match = ['<li>hello', '<li>', null] //$('<li>hello') */
+}
+
+if() { //能进入的有： $('<li>') $('#div1')
+	if (){ //能进入的是创建标签
+		//$('<li>')
+		//创建标签时候，可以写第二个参数的情况有：$('<li>', document) 这时候，这个document写不写，都是在当前document中创建li，但是写成 $('<li>', contentWindow.document) 就是有iframe的时候，在iframe的document上创建li
+	} else { //else走的是选择id
+		//$('#div1')
+	}
+}
+```
+
+类似数组的对象
+
+```js
+this = {
+	0 : 'li',
+	1 : 'li',
+	2 : 'li',
+	length : 3
+}
+```
+
+对于这样一个对象，可以采用for循环。
+
+```js
+for (var i = 0; i < this.length; i++){
+	this[i].style.background = 'red';
+}
+```
+
+在jQuery中，确实就是如此，因此：
+
+```js
+$(function(){
+	//$('li') -> this
+	//因为this是存成上面的那样的形式的，所以
+	//$('li')[1] 就可以找到里面具体存的一个li，而且这个li是原生的
+	$('li')[1].style.background = 'red'; //就可以单独对一个li进行样式操作了
+});
+```
+
+jQuery.parseHTML: 将字符串转为节点数组
+
+```js
+$(function(){
+	var str = '<li>1</li><li>2</li><li>3</li><script>alert(4)<\/script>'; 
+	//注意script标签这里的反斜杠要转义，面对让计算机误以为与页面前方出现的<script>标签成要一对
+	var arr = jQuery.parseHTML(str, document, true);  //第二个参数是指定根节点；第三个参数是布尔值，就是用来看最后的那个script标签能不能添进去，第三个参数默认为false，也就是说不能添加script标签，但是如果传入的为true，就代表能够添加script标签
+	//arr = ['li', 'li', 'li']
+	$.each(arr, function(i){
+		$('ul').append(arr[i]); //确实能添加到页面上
+	})
+})
+```
+
+jQuery.merge的用法
+
+```js
+//jQuery.merge对外使用的时候，作用是数组合并
+var arr = ['a', 'b'];
+var arr2 = ['c', 'd'];
+
+$.merge(arr, arr2); //['a', 'b', 'c', 'd']
+
+//对内使用，还可以进行json的合并，但是json必须是特殊形式
+var arr = {
+	0: 'a', 
+	1: 'b',
+	length: 2
+}
+
+var arr2 = ['c', 'd'];
+$.merge(arr, arr2);  //合并完之后成为一个json了
+/*
+{
+	0: 'a',
+	1: 'b',
+	2: 'c',
+	3: 'd'
+	length: 4
+}
+*/
+
+``` 

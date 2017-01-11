@@ -485,3 +485,74 @@ function(i){
 ```
 
 ###(285, 347) extend : JQ的继承方法
+
+```js
+//extend的使用方法
+//$.extend()
+//$.fn.extend()
+
+//当只写一个对象自变量的时候，JQ中扩展插件的形式
+$.extend({ //扩展工具方法
+	aaa: function(){
+		alert(1);
+	},
+	bbb: function(){
+		alert(2);
+	}
+});
+$.aaa(); //1
+$.bbb(); //2
+
+$.fn.extend({ //扩展实例方法
+	aaa: function(){
+		alert(3);
+	},
+	bbb: function(){
+		alert(4);
+	}	
+});
+$().aaa(); //3
+$().bbb(); //4
+
+//$.extend(); -> this -> $ -> this.aaa -> $.aaa()
+//$.fn.extend(); -> this -> $.fn -> this.aaa -> $().aaa()
+
+//当写多个对象自变量的时候，后面的对象都扩展到第一个对象上
+var a = {};
+$.extend(a, {name: 'hello'}, {age: 30});
+console.log(a); //{name: 'hello', age: 30}
+
+//还可以做深拷贝和浅拷贝，默认是浅拷贝
+var a = {};
+var b = {name: 'hello'};
+$.extend(a, b);
+a.name = 'hi';
+alert(b.name); //'hello'
+
+var a = {};
+var b = {name: {age: 30}};
+$.extend(a, b);
+a.name.age = 20;
+alert(b.name.age); //20 受到影响了，因为默认是浅拷贝
+
+//使用深拷贝 $.extend(true, a, b) 这样就不受影响了
+```
+
+extend的实现
+
+```js
+//简化的总体结构
+
+jQuery.extend = jQuery.fn.extend = function(){
+	//定义一些变量
+
+	if(){} 看是不是深拷贝情况
+	if(){} 看参数是否正确
+	if(){} 看是不是插件情况
+	for(){ 可能有多个对象的情况
+		if(){} 防止循环引用
+		if(){} 深拷贝
+		else if(){} 浅拷贝
+	}
+}
+```

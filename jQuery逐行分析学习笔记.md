@@ -210,7 +210,7 @@ jQuery中的init需要处理的各种情况
 - selector为字符串时
 	- $(""), $(null), $(undefined), $(false)
 	- $('#div1') $('.box') $('div') $('#div1 div.box')
-	- $('<li>') $('<li>1</li><li>2</li>') 创建标签的写法
+	- $('\<li\>') $('\<li\>1\</li\>\<li\>2\</li\>') 创建标签的写法
 - selector为元素的时候
 	- $(this) $(document)
 - selector为函数的时候
@@ -323,5 +323,27 @@ $.merge(arr, arr2);  //合并完之后成为一个json了
 	length: 4
 }
 */
+```
 
-``` 
+针对创建标签并添加属性的形式：
+
+```js
+$('<li>', {title: 'hi', html: 'abcd', css: {background: 'red'}}).appendTo('ul');
+```
+
+要完成上面的功能，jq中是这样实现的：
+
+```js
+if(rsingleTag.test(match[1]) && jQuery.isPlainObject(context)){
+	for(match in context){
+		if(jQuery.isFunction(this[match])){
+			this[match](context[match]);
+			//如果jquery中有这个方法，比如 $(...).html()方法或者$(...).css()方法，那么就直接调用方法
+		} else {
+			this.arrt(match, context[match]);
+			//如果jquery中没有对应方法，如此例中的title，那么就添加属性
+		}
+	}
+}
+```
+

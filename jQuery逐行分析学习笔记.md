@@ -168,7 +168,7 @@ jQuery.fn = jQuery.prototype = { //添加实例属性和方法
 	selector: 存储选择字符串
 	length: this对象的长度
 	toArray(): 转数组
-	get(): 转原声集合
+	get(): 转原生集合
 	pushStatck(): JQ对象的入栈
 	each(): 遍历集合
 	ready(): DOM加载的接口
@@ -347,3 +347,141 @@ if(rsingleTag.test(match[1]) && jQuery.isPlainObject(context)){
 }
 ```
 
+$(#id)的处理
+
+```js
+//match = ['#div1', null, 'div1'] //$('#div1')
+elem = document.getElementById(match[2]);
+if(elem && elem.parentNode){
+	this.length = 1;
+	this[0] = elem;
+}
+this.context = document;
+this.selector = selector;
+return this;
+```
+
+jQuery.makeArray的用法
+
+```js
+//比如在页面上有三个div
+
+//$.makeArray对外使用，是可以将类似数组的转为数组
+$(function(){
+	var aDiv = document.getElementByTagName('div');
+	//aDiv.push() 报错
+	$.makeArray(aDiv);
+	//aDiv.push() 不再报错了
+
+	//$.makeArray在内部使用，可以传入第二个参数，可以将转化出来的数组添加到后面第二个参数的对象上去
+	console.log($.makeArray(aDiv, {length: 0}));
+	//{0: div, 1: div, 2: div, length: 3}
+})
+```
+
+toArray()方法：转数组
+
+```js
+//假设有三个div
+$(function(){
+	console.log($('div')); //对象
+	console.log($('div').toArray()); //数组（原生元素组成的数组，后面要调用原生的方法）
+})
+
+//$(...).toArray()的实现方法
+function(){
+	return core_slice.call(this);
+	//在jq源码中，core_slice = core_deletedIds.slice
+	//而前面定义的core_deletedIds = [];
+	//所以core_slice.call(this)就相当于[].slice.call(this); 典型地转换位数组的做法
+}
+```
+
+get()方法：转原生集合
+
+```js
+//get方法的使用
+/*
+比如在DOM中：
+<div>111111111</div>
+<div>111111111</div>
+<div>111111111</div>
+*/
+//$('div').get(0); //得到第一个原生div，后面用原生方法
+$('div').get(0).innerHTML = '22222';
+
+//$('div').get(); //get()方法不传参，就返回三个div的一个集合
+for(var i = 0; i < $('div').get().length; i++){
+	$('div').get(i).innerHTML = '33333';
+}
+
+//get方法的实现
+function(num){
+	return num == null?
+		this.toArray() : //返回一个“干净”的数组
+		(num < 0 ? this[this.length + num] : this[num]);
+}
+```
+
+pushStack()方法：JQ对象的入栈（栈是先进后出）
+
+```js
+//pushStack()的使用
+/* 页面中
+<div>div</div>
+<span>span</span>
+*/
+
+//$('div').pushStack($('span')).css('background', 'red'); //span背景变红
+$('div').pushStack($('span')).css('background', 'red').css('background', 'green'); //span最终变成绿色了
+$('div').pushStack($('span')).css('background', 'red').end().css('background', 'yellow'); //span为红，div为黄
+//用end()可以追溯到stack的下一层
+
+//pushStack()方法的实现
+function(elems){
+	var ret = jQuery.merge(this.constructor(), elems);
+	//this.constructor()是一个空的jQuery对象
+	ret.prevObject = this;
+	ret.context = this.context;
+	return ret;
+}
+```
+
+end()方法
+
+```js
+function(){
+	//这里的prevObject就是在pushStack方法里面添加的属性
+	return this.prevObject || this.constructor(null);
+}
+```
+
+slice()方法
+
+
+```js
+/* 假设DOM中有四个div */
+$('div').slice(1, 3).css('background', 'red'); //第2、3个div背景变为红色
+
+$('div').slice(1, 3).css('background', 'red').end().css('color', 'blue'); //第2、3个div背景变为红色，然后全部四个div的文字颜色变为蓝色
+
+//slice()方法的实现
+function(){
+	return this.pushStack(core_slice.apply(this, arguments))
+}
+```
+
+each()、ready()方法都调用了工具方法，等讲到工具方法的时候再说。
+
+eq()方法：集合的指定项
+
+```js
+//eq的实现
+function(i){
+	var len = this.length;
+	var j = +i + (i < 0 ? len : 0);
+	return this.pushStack(j >= 0 && j < len ? [this[j]] : []);
+}
+```
+
+###(285, 347) extend : JQ的继承方法

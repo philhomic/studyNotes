@@ -551,8 +551,185 @@ jQuery.extend = jQuery.fn.extend = function(){
 	if(){} 看是不是插件情况
 	for(){ 可能有多个对象的情况
 		if(){} 防止循环引用
+		//$.extend(a, {name: a}); 这样出现了循环引用
 		if(){} 深拷贝
+		//需要判断 例如：
+		//var a = { name : { job : 'it' } }
+		//var b = { name : { age : 30 } }
+		//$.extend(true, a, b);
+		//a -> { name : { job: 'it', age: 30} }
 		else if(){} 浅拷贝
 	}
 }
 ```
+
+```js
+//根据jQuery原理，简单实现了一个深拷贝的函数
+function deepClone(target){
+  var options, name, src, copy, clone;
+  for(var i = 1; i < arguments.length; i++){
+    options = arguments[i];
+
+    for(name in options){
+      src = target[name];
+      copy = options[name];
+
+      if(src && src instanceof Object){
+        clone = src;
+      } else if(copy instanceof Array){
+        clone = [];
+      } else if(copy instanceof Object){
+        clone = {};
+      }
+
+      if(copy && copy instanceof Object){
+        target[name] = deepClone(clone, copy)
+      } else {
+        target[name] = copy;
+      }
+    }
+  }
+  return target;
+}
+```
+
+jQ中选择：拷贝继承
+JS：类式继承 （new 构造函数） / 原型继承 {}
+
+###(349, 817) jQuery.extend() : 扩展一些工具方法
+
+工具方法既可以给JQ用也可以给原生来用。
+
+```js
+jQuery.extend({
+	expando: 生成唯一JQ字符串（内部）
+	noConflict(): 防止冲突
+	isReady: DOM是否加载完（内部）
+	readyWait: 等待多少文件的计数器（内部）
+	holdReady(): 推迟DOM触发
+	ready(): 准备DOM触发
+	isFunction(): 是否为函数
+	isArray(): 是否为数组
+	isWindow(): 是否为window
+	isNumeric(): 是否为数字
+	type(): 判断数据类型
+	isPlainObject(): 是否为对象自变量
+	isEmptyObject(): 是否为空的对象
+	error(): 抛出异常
+	parseHTML(): 解析节点
+	parseJSON(): 解析JSON
+	parseXML(): 解析XML
+	noop(): 空函数
+	globalEval(): 全局解析JS
+	camelCase(): 转驼峰
+	nodeName(): 是否为指定节点名（内部）
+	each(): 遍历集合
+	trim(): 去前后空格
+	makeArray(): 类数组转真数组
+	inArray(): 数组版indexOf
+	merge(): 合并数组
+	grep(): 过滤新数组
+	map(): 映射新数组
+	guid: 唯一标识符（内部）
+	proxy(): 改this指向
+	access(): 多功能值操作（内部）
+	now(): 当前时间
+	swap(): CSS交换（内部）
+});
+jQuery.ready.promise = function(){}; 监测DOM的异步操作（内部）
+function isArraylike(){} 类似数组的判断（内部）
+```
+
+noConflict 防止冲突
+
+
+```js
+//用法
+var miaov = $.noConflict();
+
+var $ = 123;
+
+miaov(function(){
+	alert($);
+});
+
+//实现
+//在jq一开头中有定义变量：
+var _jQuery = window.jQuery,
+	_$ = window.$;
+
+function(deep){ //这里的deep是决定是否放弃jQuery这个接口的
+	if(window.$ === jQuery){
+		window.$ = _$;
+	}
+	if(deep && window.jQuery === jQuery){
+		window.jQuery = _jQuery;
+	}
+}
+```
+
+DOM加载相关
+
+```js
+$(function(){}) //页面中的DOM加载完，就走中间的函数
+window.onload = function(){} //页面所有内容都加载完，就走后面的函数
+
+//DOMContentLoaded事件，原生
+
+//$(function(){})调用的接口是
+if ( jQuery.isFunction( selector ) ) {
+	return rootjQuery.ready( selector );
+}
+//rootjQuery.ready(selector); 就相当于 $(document).ready(function(){})
+//所以 $(function(){})和$(document).ready(function(){})是一回事
+
+//$().ready() -> 这是一种实例方法
+//$.ready() -> 这是工具方法
+
+//在$().ready() 中，调用的是
+jQuery.ready.promise().done(fn); //最后是一个 .done() 就看出来，前面的jQuery.ready.promise()返回的应该是一个延迟对象。fn这个函数会被存起来，然后等到适当的时机再触发
+
+//jQuery.ready.promise()是这样定义的：
+function( obj ) {
+	if ( !readyList ) {
+		readyList = jQuery.Deferred(); //创建延迟对象
+		if ( document.readyState === "complete" ) {
+			setTimeout( jQuery.ready );
+		} else {
+			document.addEventListener( "DOMContentLoaded", completed, false );
+			window.addEventListener( "load", completed, false );
+		}
+	}
+	//不管走if还是else，最终走的都是jQuery.ready()这个工具方法
+	return readyList.promise( obj );
+};
+
+//以上代码中的completed回调函数是这样定义的：
+completed = function() {
+	document.removeEventListener( "DOMContentLoaded", completed, false );
+	window.removeEventListener( "load", completed, false );
+	jQuery.ready();
+};
+```
+
+```js
+//现在来看$.ready()工具方法的定义
+function( wait ) {
+	if ( wait === true ? --jQuery.readyWait : jQuery.isReady ) {
+		return;
+	}
+
+	jQuery.isReady = true;
+
+	if ( wait !== true && --jQuery.readyWait > 0 ) {
+		return;
+	}
+
+	readyList.resolveWith( document, [ jQuery ] ); //这一句就是在延迟对象中看是否已完成 resolveWith代表已完成，已经准备好了。当走到这一句的时候，后面就调用 jQuery.fn了
+
+	if ( jQuery.fn.trigger ) {
+		jQuery( document ).trigger("ready").off("ready");
+	}
+}
+```
+

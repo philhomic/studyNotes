@@ -733,3 +733,74 @@ function( wait ) {
 }
 ```
 
+```js
+//readyList.resolveWith(document, [jQuery]);
+//看到这一句，可以来验证
+$(function(arg){
+	alert(arg); //这里的arg就是jQuery
+	alert(this); //这里的this就是document
+})
+```
+
+```js
+// if ( jQuery.fn.trigger ) {
+// 	jQuery( document ).trigger("ready").off("ready");
+// }
+//以上代码对应的是 $(function(){})和$(document).ready(function(){})的另一种写法
+$(document).on('ready', function(){});
+//以上就是利用jQuery的主动触发来触发的 jQuery.fn.trigger就是主动触发的方法
+```
+
+$.holdReady() 推迟DOM触发的用法
+
+```js
+$.holdReady(true); //把ready推迟了
+//$.getScript()方法是异步的，所以不影响后续加载，可能会让ready限制性，所以要把ready推迟，才能保证执行顺序
+$.getScript('a.js', function(){ //a.js的内容是 alert(1)
+	$.holdReady(false); //释放推迟
+})
+
+$.holdReady(true);
+$.getScript('b.js', function(){
+	$.holdReady(false);
+})
+
+$.holdReady(true);
+$.getScript('c.js', function(){
+	$.holdReady(false);
+})
+
+//上面holdReady调用了三回，那么holdReady函数中的jQuery.readyWait++就加了三回，然后释放的时候，就在ready函数里面jQuery.readyWait再依次递减。当readyWait为0的时候，ready函数内部再继续向下走
+
+$(function(){
+	alert(2);
+})
+```
+
+$.isArray判断是否为数组的实现
+
+```js
+//采用原生的Array.isArray即可判断
+isArray: Array.isArray
+```
+
+$.isWindow判断是否为window对象
+
+```js
+function(obj){
+	return obj != null && obj === obj.window;
+}
+```
+
+$.isNumeric判断是否为数字
+
+```js
+function(obj){
+	return !isNaN(parseFloat(obj)) && isFinite(obj);
+}
+```
+
+
+
+
+

@@ -800,6 +800,50 @@ function(obj){
 }
 ```
 
+$.type的使用及实现
+
+```js
+var a = 'hello';
+var b = [];
+var c = {};
+var d = null;
+var e = new Date;
+alert($.type(a)); //string
+alert($.type(b)); //array typeof的话会返回object
+alert($.type(c)); //object
+alert($.type(d)); //null
+alert($.type(e)); //date typeof的话会返回object
+alert($.type(null)) //null
+alert($.type(undefined)) // undefined
+```
+
+```js
+//$.type的实现
+function(obj){
+	if(obj == null){
+		return String(obj);
+		//通过这个方法，将null和undefined转为字符串
+		//null == null -> true
+		//undefined == null -> true
+	}
+	return typeof obj === "object" || typeof obj === "function" ?
+		class2type[core_toString.call(obj)] || "object" : 
+		typeof obj;
+}
+
+//其中 core_toString 存的是class2type.toString
+//而class2type存的是{}，所以core_toString存的就是json的toString这个函数，用这个函数call上要判断的这个obj
+
+{}.toString.call([]); //[object Array]
+{}.toString.call([]) == '[object Array]'; //true
+{}.toString.call(new Date); //[object Date]
+
+//class2type的值在jq后面有定义，是这样定义的
+jQuery.each("Boolean Number String Function Array Date RegExp Object Error".split(' '), function(){
+	class2type["[object " + name + "]"] = name.toLowerCase();
+})
+```
+
 
 
 

@@ -844,6 +844,265 @@ jQuery.each("Boolean Number String Function Array Date RegExp Object Error".spli
 })
 ```
 
+isPlainObject() 方法：判断是否为对象自变量
+
+```js
+//对象自变量就是json或new object形式
+var obj = {};
+alert($.isPlainObject(obj)); //true
+var obj1 = { name: 'hello' };
+alert($.isPlainObject(obj1)); //true
+var obj2 = new Object();
+alert($.isPlainObject(obj2)); //true
+$.isPlainObject([]); //false
+
+//$.isPlainObject的实现
+function(obj){
+	if(jQuery.type(obj) !== "object" || obj.nodeType || jQuery.isWindow(obj)){
+		return false;
+	}
+
+	try {
+		if(obj.constructor && !core_hasOwn.call(obj.constructor.prototype, "isPrototypeof")){
+			//core_hasOwn  = class2type.hasOwnProperty
+			//其中 class2type被定义为一个json，因此，core_hasOwn就是json的hasOwnProperty属性
+			//hasOwnProperty是判断对象下面的属性是不是它自己的
+			//只有Object.prototype上有"isPrototypeof"方法，因此，如果一个obj的自己的property有isPrototypeof，那它肯定就是object，否则就不是
+			return false;
+		}
+	} catch(e){
+		return false;
+	}
+	return true;
+}
+```
+
+isEmptyObject(): 是否为空的对象
+
+```js
+//用法
+var obj = {name: 'hello'};
+$.isEmptyObject(obj); //false;
+var obj1 = {};
+$.isEmptyObject(obj1); //true;
+$.isEmptyObject([]); //true;
+function Aaa(){}
+var obj2 = Aaa();
+$.isEmptyObject(obj2); //true
+
+//实现
+function(obj){
+	var name;
+	for(name in obj){ //如果不是自身之下的属性和方法，那就for in不到
+		return false;
+	}
+	return true;
+}
+```
+
+error(): 抛出异常
+
+```js
+//用法
+$.error('这是错误');
+//实现
+function(msg){
+	throw new Error(msg); //抛出自定义异常，开发者给自己留的便签
+}
+```
+
+parseHTML()方法：解析节点，把字符串转为节点
+
+```js
+//用法
+var str = '<li></li><li></li><script><\/script>';
+$.parseHTML(str); //转成了两个li放在了数组里面
+$.parseHTML(str, document, false); //script标签不会被转化，数组里之后li
+$.parseHTML(str, document, true); //script标签页被转为节点，放在了数组里面
+
+//parseHTML的实现
+function(data, context, keepScripts){
+	if(!data || typeof data != "string"){
+		return null;
+	}
+	if(typeof context == "boolean"){
+		keepScripts = context;
+		context = false;
+	}
+	context = context || document;
+
+	//rsingleTag = /^<(\w+)\s*\/?>(?:<\/\1>|)$/
+	//这个正则匹配的是单标签形式：<p></p>, <div></div>或<img />这种形式
+	var parsed = rsingleTag.exec(data),
+	    scripts = !keepScripts && [];
+	//单标签情况
+	if(parsed) {
+		return [ context.createElement(parsed[1]) ];
+	}
+
+	//多标签情况
+	parsed = jQuery.buildFragment([data], context, scripts);
+	if(scripts){
+		jQuery(scripts).remove();
+	}
+	return jQuery.merge([], parsed.childNodes);
+}
+```
+
+parseJSON() 解析JSON
+
+```js
+//用法
+var str = '{"name": "hello"}';
+$.parseJSON(str).name; //hello
+
+//实现
+JSON.parse //就是只能解析严格格式JSON的eval
+//将JSON解析为字符串
+JSON.stringify() //与JSON.parse功能正好相反
+```
+
+parseXML() 解析XML
+
+```js
+//用法请查看jQuery官网示例
+//实现
+function(data){
+	var xml, tmp;
+	if(!data || typeof data != "string"){
+		return null;
+	}
+
+	try {
+		tmp = new DOMParser(); //创建了一个解析XML的实例对象
+		xml = tmp.parseFromString(data, "text/xml"); //ie9下，如果传入的data有问题，那么这句代码会报错；其他浏览器不会报错，但是会创建一个parsererror的标签
+	} catch(e){
+		xml = undefined;
+	}
+
+	if(!xml || xml.getElementByTagName("parsererror").length){
+		jQuery.error("Invalid XML: " + data);
+	}
+	return xml;
+}
+```
+
+$.noop 返回空函数
+
+```js
+//实现
+function(){}
+
+//用法
+//当我们写插件或组件的时候，可能会有一些默认参数
+function Aaa(){
+	this.defaults = {
+		show: $.noop
+	}; //默认配置中并没有提供show的具体方法，这时候需要一个空函数，就可以直接使用$.noop，这样可以进行容错处理，不让这个地方不写的话，程序出错
+}
+Aaa.prototype.init = function(opt){
+	$.extend(this.defaults, opt); //用配置参数覆盖默认参数
+}
+```
+
+globalEval(): 全局解析JS
+
+```js
+//使用
+function test(){
+	//var newVar = true;
+
+	jQuery.globalEval("var newVar = true;");
+	//在这里将newVar弄成全局可访问的变量
+}
+test();
+alert(newVar); //true
+
+//实现
+function(code){
+	var script, indirect = eval;
+	code = jQuery.trim(code);
+
+	if(code){
+		if(code.indexOf("use strict") === 1){
+			script = document.createElement("script");
+			script.text = code;
+			document.head.appendChild(script).parentNode.removeChild(script);
+		} else {
+			indirect(code); //这里用了indirect，没有直接用eval，解释可以看下面的例子
+		}
+	}
+}
+```
+
+eval与window.eval的差别
+
+```js
+function test(){
+	eval('var a = 1');
+	alert(a);
+}
+test();
+//以上代码会弹出1
+//这里是分割线
+function test(){
+	eval('var a = 1');
+}
+test();
+alert(a);//全局下这个a找不到
+//这里是分割线
+function test(){
+	window.eval('var a = 1');
+}
+test();
+alert(a) //这时候就弹出了1
+//这里是分割线
+function test(){
+	var val = eval;
+	val('var a = 1');
+}
+test();
+alert(a); //这时候1也能找到，这说明 var val = eval这种写法与写window.eval作用是一样的，但是直接写eval是不行的
+
+//eval既是js中的一个关键字，也是window下的一个属性。如果直接使用eval，那么会作为关键字使用。关键字只会在局部范围内起作用。但是window.eval是window下的一个属性，可以全局找到，是可以全局解析到的。
+```
+
+camelCase() 转驼峰
+
+```js
+//把css中的样式转成js可以接受的形式
+$.camelCase('margin-top'); //marginTop
+
+//实现
+function(string){
+	return string.replace(rmsPrefix, "ms-").replace(rdashAlpha, fcamelCase);
+	// -ms-transform -> msTransform //ie这里的前缀开头是要小写的
+	// -webkit-transform -> WebkitTransform
+	// -moz-transform -> MozTransform
+
+	//rmsPrefix = /^-ms-/
+	//rdashAlpha = /-([\da-z])/gi //匹配一个横杠加一个字母或数字
+	//fcamelCase = function( all, letter ) { return letter.toUpperCase();
+	}
+}
+```
+
+$.nodename() 是否为指定节点名
+
+```js
+$(function(){
+	$.nodename(document.documentElement, 'html'); //true
+	$.nodename(document.body, 'html'); //false
+	$.nodename(document.body, 'body'); //true
+})
+
+//实现
+function(elem, name){
+	return elem.nodeName && elem.nodeName.toLowerCase() === name.toLowerCase();
+}
+```
+
+
 
 
 

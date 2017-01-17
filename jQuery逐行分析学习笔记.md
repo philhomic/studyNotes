@@ -1102,8 +1102,91 @@ function(elem, name){
 }
 ```
 
+each()：遍历集合，针对数组、类数组和JSON
 
+```js
+//用法
+//针对arr, arguments, childNodes, getElementByTagName
+var arr = ['a', 'b', 'c', 'd'];
+$.each(arr, function(i, value){
+	console.log(i);
+	console.log(value);
+})
 
+var json = { name: 'hello', age: 20 };
+$.each(json, function(i, value){
+	console.log(i);
+	console.log(value);
+	return false; //这样会跳出循环
+})
+
+//$.each方法的实现
+function( obj, callback, args ) { //args是供内部使用的
+	var value,
+		i = 0,
+		length = obj.length,
+		isArray = isArraylike( obj ); //也适用于this -> {1: , 2: , 3: , ... , length: }
+
+	if ( args ) { //如果有args，也就是说供内部使用的，走前面的if
+		if ( isArray ) {
+			for ( ; i < length; i++ ) {
+				value = callback.apply( obj[ i ], args );
+
+				if ( value === false ) { //这就是为什么在$.each的循环中写return false会跳出循环
+					break;
+				}
+			}
+		} else {
+			for ( i in obj ) {
+				value = callback.apply( obj[ i ], args );
+
+				if ( value === false ) {
+					break;
+				}
+			}
+		}
+
+	} else { //没有args就是供外部使用的，走else
+		if ( isArray ) {
+			for ( ; i < length; i++ ) {
+				value = callback.call( obj[ i ], i, obj[ i ] );
+
+				if ( value === false ) {
+					break;
+				}
+			}
+		} else {
+			for ( i in obj ) {
+				value = callback.call( obj[ i ], i, obj[ i ] );
+
+				if ( value === false ) {
+					break;
+				}
+			}
+		}
+	}
+
+	return obj;
+}
+```
+
+$.trim()方法：去前后空格
+
+```js
+//用法
+var str = '   hello   ';
+alert('(' + str + ')');
+alert('(' + $.trim(str) + ')');
+
+//实现
+function(text){
+	return text == null ? "" : core_trim.call(text);
+	//core_trim在前面存为core_version.trim
+	//core_version在前面存为 "2.0.3" 是一个字符串，所以就是 "".trim 也就是 String.prototype.trim
+	//原生的用法 (' hello ').trim()
+	// ''.trim.call('  hello  ')
+}
+```
 
 
 

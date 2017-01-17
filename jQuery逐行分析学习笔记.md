@@ -1261,4 +1261,81 @@ function(first, second){
 }
 ```
 
+$.grep(): 过滤数组
+
+```js
+//使用
+var arr= [1, 2, 3, 4];
+arr = $.grep(arr, function(n, i){
+	return n > 2;
+});
+arr1 = $.grep(arr, function(n, i){
+	return n > 2;
+}, true); //这里$.grep接受了第三个参数，如果为true，那么过滤的就正好跟不加第三个参数过滤的正好相反
+console.log(arr); //[3, 4]
+console.log(arr1); //[1, 2]
+
+//实现
+function(elems, callback, inv){
+	var retVal,
+		ret = [],
+		i = 0,
+		length = elems.length;
+		inv = !!inv;
+	for(; i < length; i++){
+		retVal = !!callback(elems[i], i);
+		if(inv !== retVal) {
+			ret.push(elems[i]);
+		}
+	}
+	return ret;
+}
+```
+
+$.map(): 映射新数组
+
+```js
+//使用
+var arr = [1, 2, 3, 4];
+arr = $.map(arr, function(n, i){
+	return n + 1;
+})
+console.log(arr); //[2, 3, 4, 5]
+
+arr1 = $.map(arr, function(n, i){
+	return [n + 1];
+})
+arr1 = [2, 3, 4, 5]; //而不是想象中的[[2], [3], [4], [5]] 因为在源码中最后返回的时候，使用了 [].concat.apply()
+
+//实现
+function(elems, callback, arg){
+	var value,
+		i = 0,
+		length = elems.length,
+		isArray = isArraylike(elems),
+		ret = [];
+	if(isArray){
+		for(; i < length; i++){
+			value = callback(elems[i], i, arg);
+			if(value != null){
+				ret[ret.length] = value;
+			}
+		}
+	} else {
+		for(i in elems){
+			value = callback(elems[i], i, arg);
+			if(value != null){
+				ret[ret.length] = value;
+			}
+		}
+	}
+
+	//将嵌套数组扁平化
+	return core_concat.apply([], ret);
+	//core_concat就是[].concat，即Array.prototype.concat
+	//[].concat(1) -> [1]
+	//[].concat([1]) -> [1]
+}
+```
+
 

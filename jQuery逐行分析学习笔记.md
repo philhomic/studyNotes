@@ -1188,5 +1188,77 @@ function(text){
 }
 ```
 
+$.makeArray(): 类数组转真数组，还可以将字符串和json转成数组
+
+```js
+//假设页面中有三个div
+//用法
+window.onload = function(){
+	var aDiv = document.getElementsByTagName('div');
+	$.makeArray(aDiv); //[div, div, div]
+	var str = 'hello';
+	$.makeArray(str); //["hello"]
+	var num = 123;
+	$.makeArray(num); //[123]
+
+	//$.makeArray供内部使用还可以接收第二个参数，一个json，这个json中一定要有length
+	$.makeArray(num, {length: 0});// {0: 123, length: 1}
+}
+
+//实现
+function(arr, results){
+	var ret = results || [];
+	if(arr != null){
+		if(isArraylike(Object(arr))){
+			//如果arr传进来的是字符串，那么这里的if会为真，所以下面专门对字符串进行了判断
+			jQuery.merge(ret, typeof arr === "string" ? [arr] : arr);
+		} else {
+			core_push.call(ret, arr);
+			//core_push就是[].push，就是Array.prototype.push 即数组的push方法
+		}
+	}
+	return ret;
+}
+```
+
+$.inArray() 数组版indexOf
+
+```js
+//用法
+var arr = ['a', 'b', 'c', 'd'];
+$.inArray('b', arr); //1
+$.inArray('w', arr); //-1
+
+//实现
+function(elem, arr, i){
+	return arr == null ? -1 : core_indexOf.call(arr, elem, i);
+	//core_indexOf就是[].indexOf就是Array.prototype.indexOf
+}
+```
+
+$.merge() 合并数组，对内也可以转为特殊形式的json
+
+```js
+//实现
+function(first, second){
+	var l = second.length,
+		i = first.length,
+		j = 0;
+	if(typeof l === "number"){
+		//走if的 $.merge(['a', 'b'], ['c','d'])
+		//$.merge({0: 'a', 1: 'b', length: 2}, {0: 'c', 1: 'd'})
+		for(; j < l; j++){
+			first[i++] = second[j];
+		}
+	} else {
+		//走else的 $.merge(['a', 'b'], {0: 'c', 1: 'd'})
+		while(second[j] != undefined){
+			first[i++] = second[j++];
+		}
+	}
+	first.length = i;
+	return first;
+}
+```
 
 

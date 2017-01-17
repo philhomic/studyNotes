@@ -1338,4 +1338,95 @@ function(elems, callback, arg){
 }
 ```
 
+guid的作用
+
+```js
+//<input type="button" value="点击">
+//<input type="button" value="取消绑定">
+
+$(function(){
+	function show(){
+		alert(this);
+	}
+
+	$('input:eq(0)').click(show); //show是一个事件函数，点击弹出第一个button
+	$('input:eq(1)').click(function(){
+		$('input:eq(0)').off();
+	})
+})
+```
+
+```js
+$(function(){
+	function show(){
+		alert(this);
+	}
+
+	$('input:eq(0)').click($.proxy(show, window)); //通过$.proxy来改变show中this的指向
+	//点击弹出的是window
+	//当用$.proxy改变show中this指向的时候，show就不是事件函数, $.proxy(show, window)才是事件函数，这时候取消事件的时候，直接用下面的方式还可以取消绑定，这就是guid在起作用
+	$('input:eq(1)').click(function(){
+		$('input:eq(0)').off(); //这个时候，尽管show被嵌套了，但是还是能够被取消
+	})
+})
+```
+
+$.proxy(): 改变this指向
+
+```js
+function show(){
+	alert(this);
+}
+show(); //弹出window
+$.proxy(show, document); //这时候指向改了，但是没有执行
+$.proxy(show, document)(); //弹出document
+
+function show(n1, n2){
+	alert(n1);
+	alert(n2);
+	alert(this);
+}
+$.proxy(show, document)(3, 4); //依次弹出3，4，document
+//也可以像下面这样传参
+$.proxy(show, document, 3, 4);
+//还可以这样传参
+$.proxy(show, document, 3)(4);
+
+var obj = {
+	show: function(){
+		alert(this);
+	}
+};
+$(document).click(obj.show); //这时候弹出document
+$(document).click($.proxy(obj.show, obj)); //弹出obj
+//简写写法
+$(document).click($.proxy(obj, 'show')); //与上面的一句是一样的
+```
+
+```js
+//$.proxy的实现
+function(fn, context){
+	var tmp, args, proxy;
+
+	//支持简写方式 $(document).click($.proxy(obj, 'show'));
+	if(typeof context === "string"){
+		tmp = fn[context];
+		context = fn;
+		fn = tmp;
+	}
+
+	if(!jQuery.isFunction(fn)){
+		return undefined;
+	}
+
+	args = core_slice.call(arguments, 2); //前两个参数，对应着fn和context不要
+	proxy = function(){
+		return fn.apply(context || this, args.concat(core_slice.call(arguments)));
+	};
+
+	proxy.guid = fn.guid = fn.guid || jQuery.guid++;
+
+	return proxy;
+}
+```
 

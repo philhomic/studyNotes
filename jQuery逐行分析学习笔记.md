@@ -1430,3 +1430,148 @@ function(fn, context){
 }
 ```
 
+☆ $.access(): 多功能值操作（供内部使用）
+
+> 这里看得不是很明白
+
+
+```js
+//access的作用
+
+//以下方法具有 设置set 和 获取get的功能，就是根据参数的不同自行判断
+$().css();
+$().attr();
+
+//<div id="div1" style="width: 100px; height: 100px; background: red">aaa</div>
+$(function(){
+	console.log($('#div1').css('width')); //获取 100px
+	$('#div1').css('background', 'yello'); //设置
+	$('#div1').css({ background: 'green', width: '300px' }) //设置多个值
+})
+```
+
+```js
+//实现
+function(elems, fn, key, value, chainable, emptyGet, raw){
+	//chainable为true就代表要设置
+	//chainable为false就代表要获取
+	var i = 0,
+		length = elems.length,
+		bulk = key == null;
+	if(jQuery.type(key) === "object"){
+		//针对这种情况：
+		//$('#div1').css({ background: 'green', width: '300px' })
+		chainable = true;
+		
+		for(i in key){
+			jQuery.access(elems, fn, i, key[i], true, emptyGet, raw);
+		}
+	} else if(value !== undefined){ //设置一组值的情况
+		chainable = true;
+
+		if(!jQuery.isFunction(value)){
+			raw = true;
+		}
+
+		if(bulk){ //如果没有key值，那就不是设置什么东西，而是单纯的回调函数
+			if(raw){ //如果value是字符串，不是函数
+				fn.call(elems, value); //那么就把value传到回调函数fn里面就行了
+				fn = null;
+			} else { //如果value是函数
+				bulk = fn;
+				fn = fn(elem, key, value){
+					return bulk.call(jQuery(elem), value);
+				} //这时候fn并不执行，只是又套了一层，将值为函数的value传到fn里面，然后到下面再执行
+			}
+		}
+
+		if(fn){ //
+			for(; i < length; i++){
+				fn(elems[i], key, raw ? value : value.call(elems[i], i, fn(elems[i], key)));
+			}
+		}
+	}
+
+	return chainable ?
+			elems :
+			bulk ?
+				fn.call(elems) :
+				length ? fn(elems[0], key) : emptyGet;
+}
+```
+
+$.now()：获取当前时间
+
+```js
+alert($.now());
+//(new Date()).getTime()
+
+//实现
+Date.now
+```
+
+$.swap(): CSS交换（供内部使用）
+
+```js
+$(function(){
+	//在没有添加display: none之前，jq和原生方式都可以获取到样式
+	alert($('#div1').width()); //100
+	alert($('#div1').get(0).offsetWidth); //100
+
+	//添加display: none之后
+	//如果元素隐藏了，添加了样式 display: none
+	//那么原生的方式就获取不到样式了
+	alert($('#div1').get(0).offsetWidth); //0
+	alert($('#div1').width()); //100 jq还是可以获取到隐藏元素的值
+
+	//jq怎么能获取到隐藏元素的样式的呢？它是这样做的
+	//将display设置为block，然后再添加两个样式：visibility: hidden; position: absolute; 这个时候跟display: none的效果是一样的，但是这时候就可以获得样式了
+
+	//jq中先将老样式存起来 → 然后给元素加上新样式，在这种状态下去获取样式 → 再把正确的样式还原回来 这时候就利用了swap
+
+})
+
+//<div id="div1" style="width: 100px; height: 100px; background: red; display: none">aaa</div>
+```
+
+```js
+//实现
+//结合上面的例子来看
+function(elem, options, callback, args){
+	var ret, name,
+		old = {}; //old就是存储老的样式数据的
+	
+	for(name in options){
+		//先把老的存起来
+		old[name] = elem.style[name];
+		elem.style[name] = options[name];
+	}
+
+	//样式变了，就可以获取到值了
+	ret = callback.apply(elem, args || []);
+
+	//然后再把老的样式还原回来
+	for(name in options){
+		elem.style[name] = old[name];
+	}
+	
+	return ret;
+}
+```
+
+isArraylike: 判断是否为类数组
+
+```js
+//实现
+function isArraylike(obj){
+	var length = obj.length,
+		type = jQuery.type(obj);
+	if(jQuery.isWindow(obj)){
+		return false;
+	}
+	if(obj.nodeType === 1 && length){
+		return true;
+	}
+	return type === "array" || type !== "function" && (length === 0 || typeof length === "number" && length > 0 && (length - 1) in obj);
+}
+```

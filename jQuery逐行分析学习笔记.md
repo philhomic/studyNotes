@@ -9,7 +9,7 @@
 (function(){
 
 	(21, 94) 定义了一些变量和函数 jQuery = function(){};
-	
+
 	(96, 283) 给JQ对象添加一些方法和属性
 
 	(285, 347) extend : JQ的继承方法
@@ -39,10 +39,10 @@
 	(6621, 7854) 提交的数据和ajax() : ajax() load() getJson()
 
 	(7855, 8584) animate() : 运动的方法
-	
+
 	(8585, 8792) offset() : 位置和尺寸的方法
 
-	(8802, 8821) JQ支持模块化的模式 
+	(8802, 8821) JQ支持模块化的模式
 
 	(8826) window.jQuery = window.$ = jQuery;
 
@@ -52,7 +52,7 @@
 ##jQuery逐行解析
 
 ###(21, 94) 定义了一些变量和函数 jQuery = function(){};
-	
+
 
 ```js
 //匿名函数自执行传入window的好处
@@ -215,7 +215,7 @@ jQuery中的init需要处理的各种情况
 	- $(this) $(document)
 - selector为函数的时候
 	- $(function(){})
-- $([]) $({}) 
+- $([]) $({})
 
 在jQuery源码中，是这样判断的：
 
@@ -286,7 +286,7 @@ jQuery.parseHTML: 将字符串转为节点数组
 
 ```js
 $(function(){
-	var str = '<li>1</li><li>2</li><li>3</li><script>alert(4)<\/script>'; 
+	var str = '<li>1</li><li>2</li><li>3</li><script>alert(4)<\/script>';
 	//注意script标签这里的反斜杠要转义，面对让计算机误以为与页面前方出现的<script>标签成要一对
 	var arr = jQuery.parseHTML(str, document, true);  //第二个参数是指定根节点；第三个参数是布尔值，就是用来看最后的那个script标签能不能添进去，第三个参数默认为false，也就是说不能添加script标签，但是如果传入的为true，就代表能够添加script标签
 	//arr = ['li', 'li', 'li']
@@ -307,7 +307,7 @@ $.merge(arr, arr2); //['a', 'b', 'c', 'd']
 
 //对内使用，还可以进行json的合并，但是json必须是特殊形式
 var arr = {
-	0: 'a', 
+	0: 'a',
 	1: 'b',
 	length: 2
 }
@@ -509,7 +509,7 @@ $.fn.extend({ //扩展实例方法
 	},
 	bbb: function(){
 		alert(4);
-	}	
+	}
 });
 $().aaa(); //3
 $().bbb(); //4
@@ -827,7 +827,7 @@ function(obj){
 		//undefined == null -> true
 	}
 	return typeof obj === "object" || typeof obj === "function" ?
-		class2type[core_toString.call(obj)] || "object" : 
+		class2type[core_toString.call(obj)] || "object" :
 		typeof obj;
 }
 
@@ -1462,7 +1462,7 @@ function(elems, fn, key, value, chainable, emptyGet, raw){
 		//针对这种情况：
 		//$('#div1').css({ background: 'green', width: '300px' })
 		chainable = true;
-		
+
 		for(i in key){
 			jQuery.access(elems, fn, i, key[i], true, emptyGet, raw);
 		}
@@ -1540,7 +1540,7 @@ $(function(){
 function(elem, options, callback, args){
 	var ret, name,
 		old = {}; //old就是存储老的样式数据的
-	
+
 	for(name in options){
 		//先把老的存起来
 		old[name] = elem.style[name];
@@ -1554,7 +1554,7 @@ function(elem, options, callback, args){
 	for(name in options){
 		elem.style[name] = old[name];
 	}
-	
+
 	return ret;
 }
 ```
@@ -1574,4 +1574,178 @@ function isArraylike(obj){
 	}
 	return type === "array" || type !== "function" && (length === 0 || typeof length === "number" && length > 0 && (length - 1) in obj);
 }
+```
+
+###(2880, 3042) Callbacks : 回调对象：对函数的统一管理
+
+```js
+//基本使用
+function aaa(){
+	alert(1);
+}
+function bbb(){
+	alert(2);
+}
+
+function ccc(){
+	alert(3);
+}
+
+var cb = $.Callback(); //创建回调对象
+cb.add(aaa);
+cb.add(bbb);
+cb.fire(); //弹出1、2 //这很类似于JS中的绑定事件
+
+document.addEventListener('click', function(){ alert(1); }, false);
+document.addEventListener('click', function(){ alert(2); }, false);
+document.addEventListener('click', function(){ alert(3); }, false);
+//在document上一点击，弹出1/2/3，这就是绑定事件的特点
+```
+
+```js
+function aaa(){
+	alert(1);
+}
+(function(){
+	function bbb(){
+		alert(2);
+	}
+})();
+
+aaa(); //1能弹出来
+bbb(); //2不能弹出来
+```
+
+```js
+//解决上面的问题
+var cb = $.Callbacks();
+function(aaa){ alert(1); }
+cb.add(aaa);
+(function(){
+	function bbb(){
+		alert(2);
+	}
+	cb.add(bbb);
+})
+cb.fire(); //弹出1/2
+```
+
+```js
+jQuery.Callbacks = function(options){
+	// options
+	/*
+	once -> 作用到 fire 上，只进行一次for循环
+	memory -> 作用到 add 上，通过add调用 fire 去执行函数
+	unique -> 作用到 add 上，如果传入unique，那么重复的就不让添
+	stopOnFalse -> 作用到 fire 中的 for 循环，如果在函数中遇到return false，就立即跳出循环
+	*/
+}
+//公用方法接口
+/*
+add -> push到数组list里面
+remove -> 与add相对 对数组list进行指定位置的删除splice
+has
+empty
+disable
+disabled
+lock
+locked
+fireWith
+fire -> 调用firewith -> 调用私有的fire函数：for循环数组list
+fired
+*/
+```
+
+```js
+//参数once
+function aaa(){
+	alert(1);
+}
+function bbb(){
+	alert(2);
+}
+
+var cb = $.Callback("once"); //传入参数once，那么fire只能触发一次
+cb.add(aaa);
+cb.add(bbb);
+cb.fire();
+cb.fire(); //第二次不再触发
+```
+
+```js
+//参数memory
+function aaa(){
+	alert(1);
+}
+function bbb(){
+	alert(2);
+}
+
+var cb = $.Callback("memory"); //传入参数memory，不管在fire前面add还是后面add的，都能触发
+cb.add(aaa);
+cb.fire(); //如果不加参数，2弹出出来；如果加上参数memory，这里的2就弹出来了
+cb.add(bbb);
+```
+
+```js
+//参数unique
+function aaa(){
+	alert(1);
+}
+
+var cb = $.Callback("unique"); //传入参数unique，去重
+cb.add(aaa);
+cb.add(aaa);
+cb.fire(); //默认不传入unique，会弹出两次2；传入参数unique，只弹出一次1
+```
+
+```js
+//参数stopOnFalse
+function aaa(){
+	alert(1);
+	return false;
+}
+function bbb(){
+	alert(2);
+}
+
+var cb = $.Callback("stopOnFalse"); //传入参数once，那么fire只能触发一次
+cb.add(aaa);
+cb.add(bbb);
+cb.fire(); //默认情况下，遇到return的false，没影响；但是如果传入了stopOnFalse，那么就只弹1不弹2了
+```
+
+```js
+//参数可以任意组合
+var cb = $.Callbacks("once memory");
+cb.add(aaa);
+cb.fire();
+cb.add(bbb);
+cb.fire();
+//1、2会各弹一次
+```
+
+```js
+//针对非空白的正则
+core_rnotwhite = /\S+/g
+//jQuery中针对options的操作
+var optionsCache = {}; //建立了一个options的缓存
+
+function createOptions(options){
+	var object = optionsCache[options] == {};
+	jQuery.each(options.match(core_rnotwhite) || [], function(_, flag){ //_这里只是用来占位的，没有实际用处
+		object[flag] = true;
+	});
+	return object;
+}
+
+//举例来讲，options如果是"once memory"，那么最终optionsCache就会变成下面这样
+/*
+optionsCache = {
+	"once memory": {
+		"once": true,
+		"memory": true
+	}
+}
+*/
 ```

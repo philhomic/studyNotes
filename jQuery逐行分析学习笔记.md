@@ -8,17 +8,17 @@
 ```js
 (function(){
 
-	(21, 94) 定义了一些变量和函数 jQuery = function(){};
+	(21, 94) 定义了一些变量和函数 jQuery = function(){}; //√
 
-	(96, 283) 给JQ对象添加一些方法和属性
+	(96, 283) 给JQ对象添加一些方法和属性 //√
 
-	(285, 347) extend : JQ的继承方法
+	(285, 347) extend : JQ的继承方法 //√
 
-	(349, 817) jQuery.extend() : 扩展一些工具方法
+	(349, 817) jQuery.extend() : 扩展一些工具方法 //√
 
 	(877, 2856) Sizzle : 复杂选择器的实现
 
-	(2880, 3042) Callbacks : 回调对象：对函数的统一管理
+	(2880, 3042) Callbacks : 回调对象：对函数的统一管理 //√
 
 	(3043, 3183) Deferred : 延迟对象：对异步的统一管理
 
@@ -1666,8 +1666,7 @@ function bbb(){
 }
 
 var cb = $.Callback("once"); //传入参数once，那么fire只能触发一次
-cb.add(aaa);
-cb.add(bbb);
+cb.add(aaa, bbb); //这样写也可以
 cb.fire();
 cb.fire(); //第二次不再触发
 ```
@@ -1694,8 +1693,7 @@ function aaa(){
 }
 
 var cb = $.Callback("unique"); //传入参数unique，去重
-cb.add(aaa);
-cb.add(aaa);
+cb.add([aaa, bbb]); //这样写也可以
 cb.fire(); //默认不传入unique，会弹出两次2；传入参数unique，只弹出一次1
 ```
 
@@ -1723,6 +1721,18 @@ cb.fire();
 cb.add(bbb);
 cb.fire();
 //1、2会各弹一次
+```
+
+```js
+//fire可以接收参数
+function aaa(n){
+	alert('aaa' + n);
+}
+function bbb(n){
+	alert('bbb' + n);
+}
+cb.add(aaa, bbb);
+cb.fire('hello'); //分别弹出 aaaHello 和 bbbHello
 ```
 
 ```js

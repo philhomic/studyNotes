@@ -1644,11 +1644,11 @@ jQuery.Callbacks = function(options){
 /*
 add -> push到数组list里面
 remove -> 与add相对 对数组list进行指定位置的删除splice
-has
-empty
-disable
-disabled
-lock
+has -> 判断有没有
+empty -> 清空整个list数组
+disable -> 全部禁止
+disabled -> 判断现在是不是全部禁止了
+lock -> 锁住
 locked
 fireWith
 fire -> 调用firewith -> 调用私有的fire函数：for循环数组list
@@ -1758,4 +1758,89 @@ optionsCache = {
 	}
 }
 */
+```
+
+```js
+//回调函数中的一些特殊情况
+//下例是针对Callback源码中的stack的作用
+var bBtn = true;
+function aaa(){ 
+	alert(1);
+	//cb.fire(); //这样会造成死循环；而且bbb永远也走不到
+
+	if(bBtn){
+		cb.fire(); //弹出1/2/1/2，这说明先走alert(1)，然后走了alert(2)，然后再回来走的aaa中的cb.fire()，再弹出1，然后再弹出2，由于bBtn这时候已经变成了false，所以aaa中的if不会再进去了，所以就不会再继续fire下去
+		//所以我们发现，这里的cb.fire()实际是被放到了运行函数的队列当中
+		bBtn = false;
+	}
+}
+
+function bbb() { alert(2); }
+
+var cb = $.Callbacks();
+cb.add(aaa);
+cb.add(bbb);
+
+cb.fire();
+```
+
+```js
+function aaa(){ alert(1); }
+function bbb() { alert(2); }
+
+var cb = $.Callback('once');
+cb.add(aaa); 
+cb.fire(); //只会弹出1，然后下面即使加入bbb，也不会弹出2。因为当初传入了once
+cb.add(bbb);
+cb.fire(); //这个不会触发，因为前一次cb触发过之后，由于once就不再触发了
+```
+
+```js
+function aaa(){ alert(1); }
+function bbb() { alert(2); }
+
+var cb = $.Callback('once memory');
+cb.add(aaa); 
+cb.fire(); //弹出1/2
+cb.add(bbb);
+cb.fire(); //这里就相当于cb.fire([]) //看Callbacks源码，这时候的list数组被清空了
+```
+
+```js
+//disable和lock的区别
+//disable
+function aaa(){ alert(1); }
+function bbb(){ alert(2); }
+
+var cb = $.Callbacks('memory');
+
+cb.add(aaa);
+
+cb.fire();
+
+cb.disable(); //禁止所有操作，下面的都不起作用了
+
+cb.add(bbb);
+cb.fire()
+//以上代码，只弹1，2不弹
+```
+
+```js
+//disable和lock的区别
+//lock
+function aaa(){ alert(1); }
+function bbb(){ alert(2); }
+
+var cb = $.Callbacks('memory');
+
+cb.add(aaa);
+
+cb.fire();
+
+cb.lock(); //锁住，只会把后面的fire锁住，其他操作不会禁止
+
+cb.add(bbb); //因为有memory，所以2也弹出来了
+
+cb.fire() //这个fire没执行
+//以上代码弹出1/2
 ```

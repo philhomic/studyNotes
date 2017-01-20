@@ -1844,3 +1844,81 @@ cb.add(bbb); //因为有memory，所以2也弹出来了
 cb.fire() //这个fire没执行
 //以上代码弹出1/2
 ```
+
+###(3043, 3183) Deferred : 延迟对象：对异步的统一管理
+
+```js
+/*
+jQuery.extend({
+	Deferred: function(){},
+	when: function(){}
+});
+*/
+
+//$.Deferred(); // 基于$.Callbacks开发的
+//$.when();
+
+var cb = $.Callbacks();
+
+setTimeout(function(){
+	alert(111);
+	cb.fire();
+}, 1000);
+cb.add(function(){
+	alert(222);
+})
+//程序先弹出111，然后弹出222
+
+// ============================
+var dfd = $.Deferred();
+setTimeout(function(){
+	alert(111);
+	dfd.resolve();
+}, 1000);
+
+dfd.done(function(){
+	alert(222);
+})
+//以上这一块代码也是先弹出111，然后弹出222
+
+// ============================
+var dfd = $.Deferred();
+setTimeout(function(){
+	alert(111);
+	dfd.reject();
+}, 1000);
+
+dfd.fail(function(){
+	alert(222);
+})
+//以上这一块代码也是先弹出111，然后弹出222
+
+// ============================
+var dfd = $.Deferred();
+setTimeout(function(){
+	alert(111);
+	dfd.notify();
+}, 1000);
+
+dfd.progress(function(){
+	alert(222);
+})
+//以上这一块代码也是先弹出111，然后弹出222
+```
+
+```js
+$.ajax({
+	url: 'xxx.php',
+	success: function(){
+		alert('成功');
+	},
+	error: function(){
+		alert('失败');
+	}
+});
+
+//有了延迟对象之后，可以写成下面这样
+$.ajax('xxx.php')
+	.done(function(){ alert('成功'); })
+	.fail(function(){ alert('失败'); });
+```

@@ -1922,3 +1922,336 @@ $.ajax('xxx.php')
 	.done(function(){ alert('成功'); })
 	.fail(function(){ alert('失败'); });
 ```
+
+```js
+//源码中延迟对象的实现分析
+
+function(func){
+	var tuples = [
+		["resolve", "done", jQuery.Callbacks("once memory"), "resolved"],
+		["reject", "fail", jQuery.Callbacks("once memory"), "rejected"],
+		["notify", "progress", jQuery.Callbacks("memory")]
+	],
+	//以上这一组映射关系中：
+	//数组中的第一项"resolve"、"reject"和"notify"调用的就是回调函数中的fire
+	//数组中的第二项"done"、"fail"和"progress"对应的就是回调函数中的add
+	//接下来我们看，这些与回调函数中的fire和add是怎么映射上的：
+
+	//...中间的一些代码先不看
+
+	jQuery.each(tuples, function(i, tuple){
+		var list = tuple[2], //tuple[2]就是回调对象
+			stateString = tuple[3];
+
+		promise[tuple[1]] = list.add; //promise就是那个延迟对象，现在就是分别将回调对象的add方法付给了延迟对象的done、fail或progress属性
+	})
+
+	//...中间的一些代码先不看
+	deferred[tuple[0]] = function(){
+		deferred[tuple[0] + 'With'](this === deferred ? promise : this, arguments);
+		return this;
+	};
+	deferred[tuple[0] + 'With'] = list.fireWith; //我们这里会看到，延迟对象的resolveWith、rejectWith和notifyWith调用的都是list.fireWith，也就是回调对象的fireWith方法（fireWith跟fire其实是一回事，只不过fireWith带传参）
+}
+```
+
+```js
+//为什么resolve和reject对应的回调函数中添加了once，但是notify却没有添加
+var dfd = $.Deferred();
+setInterval(function(){
+	alert(111);
+	dfd.resolve();
+}, 1000);
+dfd.done(function(){
+	alert('成功');
+})
+//以上代码，弹出111，然后弹出“成功”，然后就一直弹111，“成功”不再弹出了。回调函数中的“once”起了作用
+
+//==============================
+var dfd = $.Deferred();
+setInterval(function(){
+	alert(111);
+	dfd.reject();
+}, 1000);
+dfd.fail(function(){
+	alert('成功');
+})
+//以上代码，弹出111，然后弹出“成功”，然后就一直弹111，“成功”不再弹出了。回调函数中的“once”起了作用
+
+//==============================
+var dfd = $.Deferred();
+setInterval(function(){
+	alert(111);
+	dfd.notify();
+}, 1000);
+dfd.progress(function(){
+	alert('进行中');
+})
+//以上代码，111和“进行中”会一直触发，因为回调函数中没有“once”
+```
+
+```js
+//看看下面代码会发生什么情况
+$(function(){
+	var cb = $.Callbacks('memory');
+
+	cb.add(function(){
+		alert(1);
+	});
+	cb.fire();
+	$('input').click(function(){
+		cb.add(function(){
+			alert(2);
+		});
+	});
+});
+
+//以上代码，在没有点击input的时候，先弹出1
+//然后一点击input，就会弹出2，因为回调函数那里有memory参数。也就是说，有memory之后，一旦add了，那么就会立即触发
+```
+
+```js
+$(function(){
+	var dfd = $.Deferred();
+	setTimeout(function(){
+		alert(111);
+		dfd.resolve();
+	}, 1000);
+	
+	dfd.done(function(){
+		alert('aaa');
+	})
+
+	$('input').click(function(){
+		dfd.done(function(){
+			alert('bbb');
+		});
+	});
+})
+//以上代码先弹出111，再弹出aaa，然后点击按钮之后，bbb立即弹出
+```
+
+```js
+//继续看jQuery中的Deferred源码
+//其中done、fail、progress放在了promise这个对象里面，对应的是回调的add
+//resolve、reject和notify放在了deferred这个对象里面，对应的是回调的fire
+
+//promise和deferred都是延迟对象，但是有区别
+
+/* promise对象中的方法
+state
+alway
+then
+promise
+pipe //promise.pipe = promise.then //说明promise下面的pipe和then的代码是同一套，但是写了两种，就是因为两者的功能不同
+done
+fail
+progress
+*/
+
+deferred = {};//一开始deferred对象是空的，后续代码通过jQuery.each遍历，添加了一些方法
+
+/*deferred对象中的方法
+resolve
+reject
+notify
+*/
+
+promise.promise(deferred); //将deferred对象作为参数传到了promise对象的promise方法中
+
+//接下来看promise下面的promise方法：
+function(obj){
+	return obj != null ? jQuery.extend(obj, promise) : promise;
+}
+//现在promise有参数为deferred，然后就走了jQuery.extend(deferred, promise)，也就是promise继承给deferred对象，通过这一句话，就把原本promise对象下的所有的方法都给了deferred，于是deferred就拥有了下面这么多方法：
+/*
+resolve
+reject
+notify
+state
+alway
+then
+promise
+pipe
+done
+fail
+progress
+*/
+//我们发现deferred对象比promise对象多出来三个方法 resove, reject和notify，这三个方法其实就是三个状态。
+```
+
+```js
+function aaa(){
+	var dfd = $.Deferred();
+	setTimeout(function(){
+		dfd.resolve();
+	}, 1000);
+	
+	return dfd;
+}
+
+aaa().done(function(){
+	alert('成功');
+}).fail(function(){
+	alert('失败');
+})
+//以上代码1秒钟之后弹成功
+
+//=============================
+
+function aaa(){
+	var dfd = $.Deferred();
+	setTimeout(function(){
+		dfd.resolve();
+	}, 1000);
+	
+	return dfd;
+}
+
+var newDfd = aaa();
+
+newDfd.done(function(){
+	alert('成功');
+}).fail(function(){
+	alert('失败');
+})
+newDfd.reject();
+//这一下弹出来的结果就是“失败”，这是因为，还没等1秒之后，这个newDfd的状态就已经变成reject了，也就是，在1秒钟之前，延迟对象的状态就被改变了。失败一触发，就不会再走其他的了。这说明我们的状态是很容易被修改掉的
+
+//=============================
+//那么怎么样可以让延迟对象的状态不被修改掉
+
+function aaa(){
+	var dfd = $.Deferred();
+	setTimeout(function(){
+		dfd.resolve();
+	}, 1000);
+	
+	return dfd.promise(); //使用这种方式，状态不会被改变
+}
+
+var newDfd = aaa();
+
+newDfd.done(function(){
+	alert('成功');
+}).fail(function(){
+	alert('失败');
+})
+newDfd.reject();
+
+//这样写会弹出“成功”，而且还会报错，就是说你不能在修改延迟对象的状态了
+
+//我们在前面的分析中看到，deferred对象下面有那么多方法，其中resolve、reject和notify都有，那么你调用reject方法，它肯定就会执行，这样状态就改变了。
+//但是promise下面根本就没有表示状态的resolve、reject和notify方法，所以也就改变不了状态了。dfd.promise()不写参数，调用的promise方法后，返回的就是promise对象
+```
+
+```js
+//延迟对象的状态
+function aaa(){
+	var dfd = $.Deferred();
+	
+	alert(dfd.state());
+
+	setTimeout(function(){
+		dfd.resolve();
+		alert(dfd.state());
+	}, 1000);
+	return dfd.promise();
+}
+
+var newDfd = aaa();
+
+newDfd.done(function(){
+	alert('成功');
+})
+//以上代码弹出 pending，然后弹出“成功”，然后弹出“resolved”
+```
+
+```js
+//继续看jQuery源码中，对状态state的处理
+if(stateString){ //在tuples中，只有resolve和reject这两个数组最后有resolved和rejected这样的stateString，在nofity这里是没有的，所以，只有在状态完成、未完成的情况下会进到if里面
+	list.add(function(){
+		state = stateString;
+	}, tuples[i^1][2].disable, tuples[2][2].lock);
+	//在回调对象中一下子又添加了好几个函数，其中第一个function(){ state = stateString; } 这个没什么好说的；后面的两个又代表什么意思呢？
+	//一旦触发了未完成，就不能再触发已完成，就是通过后面这两个函数控制的。
+	// ^ 这个是个“位运算符” 0 ^ 1会返回1；1 ^ 0会返回0
+	//所以，如果i为0，也就是对应着done的话，那么tuples[0^1][2]就是tuples[1][2]即fail的功能全部禁用掉（disable了）；同理，如果为当前状态为fail的话，那么done就会被全部disable掉，然后tuples[2][2].lock指的就是progress不能再被fire了，状态已经完成了。
+}
+```
+
+```js
+//always方法，就是不管成功还是失败都触发，所以是done和fail写在一起了
+function(){
+	deferred.done(arguments).fail(arguments);
+	return this;
+}
+
+//==================
+var dfd = $.Deferred();
+setTimeout(function(){
+	dfd.reject();
+	//dfd.resolve();
+}, 1000);
+dfd.always(function(){
+	alert('hello');
+});
+//以上代码，无论写的是dfd.reject()还是dfd.resolve()都会弹出hello
+```
+
+```js
+//then方法
+var dfd = $.Deferred();
+setTimeout(function(){
+	dfd.reject();
+	//dfd.resolve();
+}, 1000);
+dfd.then(function(){
+	alert(1); //对应成功的回调
+}, function(){
+	alert(2); //对应reject的回调
+}, function(){ //对应progress的回调
+
+}); //后面两个参数可省
+
+//======================
+//还记得回调函数里面的fire是可以传参吗？因为dfd是基于Callbacks写的，所以也可以传参
+
+var dfd = $.Deferred();
+setTimeout(function(){
+	dfd.reject('hi'); //这里就是利用了fire能传参
+}, 1000);
+dfd.then(function(){
+	alert(1); 
+}, function(){
+	alert(arguments[0]); 
+});
+//弹出hi
+```
+
+```js
+var dfd = $.Deferred();
+setTimeout(function(){
+	dfd.resolve('hi');
+}, 1000);
+var newDfd = dfd.pipe(function(){
+	return arguments[0] + '妙味'; //这里的arguments[0]其实就是'hi'
+});
+newDfd.done(function(){
+	alert(arguments[0]); //弹出‘hi妙味’
+})
+
+//pipe接收参数也是三个，第一个是完成，第二个是未完成，第三个是进行时。不同的是pipe各个函数的返回值是会作为新的延迟对象的参数，然后这个新的延迟对象一旦done、fail的话，那么就会立即执行，因为对应的resolve和reject是在源码中执行的
+//如果pipe中直接返回函数，那么就会走
+/*
+returned.promise()
+	.done(newDefer.resolve)
+	.fail(newDefer.reject)
+	.progress(newDefer.notify)
+*/
+//如果pipe返回的是字符串，那么就会走
+/*
+newDefer(action + "With")(this === promise ? newDefer.promise() : this, fn ? [returned] : arguments);
+*/
+//action就是状态，所以如果pipe返回的是字符串，还是会执行状态，只不过有returned就走returned，没有returned就还是走arguments
+```

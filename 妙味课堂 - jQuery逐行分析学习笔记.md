@@ -2255,3 +2255,127 @@ newDefer(action + "With")(this === promise ? newDefer.promise() : this, fn ? [re
 */
 //action就是状态，所以如果pipe返回的是字符串，还是会执行状态，只不过有returned就走returned，没有returned就还是走arguments
 ```
+
+$.when的使用与实现
+
+```js
+//$.when是延迟对象的辅助方法
+
+/*
+var dfd = $.Deferred();
+
+dfd.done();
+
+$.when().done();
+$.when().fail();
+$.when().then();
+*/
+
+//$.when()这个方法的返回值就是延迟对象，所以后面可以跟done, fail, then
+//$.when的源码最后返回的就是deferred.promise()，就是返回了一个外部不能更改状态的延迟对象
+
+//dfd.done()与$.when().done有什么差别呢？
+//$.when()可以对多个延迟对象的成功失败进行整体操作
+
+function aaa(){
+	var dfd = $.Deferred();
+	dfd.resolve();
+	return dfd;
+}
+aaa().done(function(){
+	alert('成功');
+})
+//以上写法只针对一个延迟对象
+
+//=========================
+function aaa(){
+	var dfd = $.Deferred();
+	dfd.resolve();
+	return dfd;
+}
+function bbb(){
+	var dfd = $.Deferred();
+	dfd.resolve();
+	return dfd;
+}
+//我的需求是等aaa和bbb的延迟对象都完成之后，再弹出“成功”
+$.when(aaa(), bbb()).done(function(){
+	alert('成功');
+}); //这就代表要等aaa()和bbb()这两个延迟对象都完成之后，再弹出成功
+
+//=========================
+function aaa(){
+	var dfd = $.Deferred();
+	dfd.reject();
+	return dfd;
+}
+function bbb(){
+	var dfd = $.Deferred();
+	//dfd.reject();
+	return dfd;
+}
+
+$.when(aaa(), bbb()).fail(function(){
+	alert('失败');
+}); //只要aaa()或bbb()这两个延迟对象中有一个reject了，那么就会触发这里的fail中的函数
+```
+
+```js
+//$.when的源码中有计数器remaining，记录有多少未完成的延迟对象
+/*
+$.when(aaa(), bbb(), ccc(), ddd()).done(function(){
+	alert(1);
+})
+其中aaa(), bbb(), ccc(), ddd()都是$.when的参数，分别是arguments[0], arguments[1], arguments[2], arguments[3]。这些都是延迟对象，每当一个argument完成之后，就会触发自己的done，这时候计数器就会减减。当所有的arguments都done了之后，计数器就会为0。一旦计数器为0，$.when的源码中有一个$.Deferred，一旦计数器为0，我们就去触发这个延迟对象的resolve。然后return这个$.Deferred的延迟对象。所以$.when().done()这时候就会触发。
+*/
+```
+
+```js
+function aaa(){
+	var dfd = $.Deferred();
+	dfd.resolve();
+	return dfd;
+}
+function bbb(){
+	var dfd = $.Deferred();
+	dfd.reject();
+	return dfd;
+}
+$.when(aaa(), bbb()).done(function(){
+	alert('成功');
+}).fail(function(){
+	alert('失败');
+})
+//上述代码弹出“失败”。
+
+// $.when()中的参数必须是延迟对象
+
+//===============================
+function aaa(){
+	var dfd = $.Deferred();
+	dfd.resolve();
+	return dfd;
+}
+function bbb(){
+	var dfd = $.Deferred();
+	dfd.reject();
+	//return dfd;
+	//这里的bbb并没有返回延迟对象
+}
+$.when(aaa(), bbb()).done(function(){
+	alert('成功');
+}).fail(function(){
+	alert('失败');
+})
+//这时候代码会弹出“成功”，因为当dfd没有在bbb中return，那么$.when就会将bbb看成是一个普通函数了，这时候就会跳过它。因为跳过了bbb，所以计数器也不再记它了，而且aaa()走成功了，所以会弹出“成功”
+
+//如果是下面这种情况
+$.when(123, 123).done(function(){
+	//arguments[0] => 123
+	// $.when中的参数不是延迟对象的时候，只能作为传参的作用
+	alert('成功');
+}).fail(function(){
+	alert('失败');
+}) //这时候也会弹出“成功”，即使$.when()当中什么参数都没写，也还是会弹出“成功”
+//如果$.when()中的参数不是延迟对象，就会被自动跳过
+```

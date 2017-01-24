@@ -20,7 +20,7 @@
 
 	(2880, 3042) Callbacks : 回调对象：对函数的统一管理 //√
 
-	(3043, 3183) Deferred : 延迟对象：对异步的统一管理
+	(3043, 3183) Deferred : 延迟对象：对异步的统一管理 //√
 
 	(3184, 3295) support : 功能检测
 
@@ -2379,3 +2379,40 @@ $.when(123, 123).done(function(){
 }) //这时候也会弹出“成功”，即使$.when()当中什么参数都没写，也还是会弹出“成功”
 //如果$.when()中的参数不是延迟对象，就会被自动跳过
 ```
+
+###(3184, 3295) support : 功能检测
+
+```js
+//jQuery.support是这样定义的
+jQuery.support = (function(support){
+	//...
+	return support;
+})({})
+//匿名函数自执行，将空对象传入，然后return出来的也是个JSON
+```
+
+```js
+$(function(){
+	for(var attr in $.support){
+		$('body').append('<div>' + attr + ': ' + $.support[attr] + '</div>')
+	}
+})
+//以上代码输出出来大概是这样的形式：
+/*
+checkOn: true
+optSelected: true
+reliableMarginRight: true
+boxSizingReliable: true
+pixelPosition: true
+noCloneCheck: true
+optDisabled: true
+radioValue: true
+checkClone: true
+focusinBubbles: false
+clearCloneStyle: true
+cors: true
+ajax: true
+boxSizing: true
+*/
+```
+

@@ -22,7 +22,7 @@
 
 	(3043, 3183) Deferred : 延迟对象：对异步的统一管理 //√
 
-	(3184, 3295) support : 功能检测
+	(3184, 3295) support : 功能检测 //√
 
 	(3308, 3652) data() : 数据缓存
 
@@ -2416,3 +2416,147 @@ boxSizing: true
 */
 ```
 
+###(3308, 3652) data() : 数据缓存
+
+```js
+//data()的使用与attr()和prop()非常类似
+/*
+<div id="div1"></div>
+*/
+$(function(){
+	// $('#div1').attr('name', 'hello');
+	// alert($('#div1').attr('name'));
+	document.getElementById('div1').setAttribute('name', 'hello');
+	alert(document.getElementById('div1').getAttribute('name'));
+
+	// $('#div1').prop('name', 'hello');
+	// alert($('#div1').prop('name'));
+	document.getElementById('div1')['name'] = 'hello';
+	alert(document.getElementById('div1')['name']);
+
+	//以上两种方式不适合挂载大量数据，使用data()方法可以解决这个问题
+	$('#div1').data('name', 'hello');
+	alert($('#div1').data('name'));
+})
+```
+
+```js
+//内存泄漏问题，JS自带垃圾回收机制
+
+//JS有几种情况会引起内存泄漏
+//DOM元素与对象之间互相引用，大部分浏览器就会出现内存泄漏
+
+var oDiv = document.getElementById('div1');
+var obj = {};
+
+oDiv.name = obj;
+obj.age = oDiv;
+//以上情况会引起内存泄漏
+
+$('#div1').attr('name', obj); //如果出现这种情况，万一后面obj又来引用了$('#div1')，那么就产生了内存泄漏，所以现在要解决这个问题，利用data()就没有问题
+
+$('#div1').data('name', obj); //这时候不用担心内存泄漏问题，这就是data()方法与attr()和prop()的区别，它可以防止内存泄漏
+```
+
+```js
+//data()防止内存泄漏的原理
+//data()利用了中介，将DOM和对象间接联系到一起
+//这个中介就是cache这个对象
+
+$('#div1').data('name', obj);
+$('body').data('age', obj);
+
+//首先$('#div1').data('name', obj)
+//第一步，找到div1的DOM节点，然后在上面生成一个自定义属性，这个自定义属性的值设为一个数字ID。
+//这时候cache可能变成下面这种形式
+var cache = {
+	1: {
+		name: obj
+	},
+	2: {
+		age: obj
+	}
+}
+```
+
+```js
+//jQuery源码中data()方法的实现，简化版
+jQuery.extend({
+	acceptData
+	hasData
+	data
+	removeData
+	_data //前面带下划线，表示私有的。并不是对外的接口，是针对内部的
+	_removeData //前面带下划线，表示私有的
+});
+
+jQuery.fn.extend({
+	data
+	removeData
+})
+```
+
+```js
+$(function(){
+	//实例方法
+	$('#div1').data('name', 'hello');
+	$('#div1').removeData('name');
+	alert($('#div1').data('name'));
+
+	//工具方法
+	$.data(document.body, 'age', 30);
+	alert($.data(document.body, 'age')); //30
+	alert($.hasData(document.body, 'age')); //true
+	$.removeData(document.body, 'age');
+	alert($.data(document.body, 'age'));
+	alert($.hasData(document.body, 'age')); //false
+})
+```
+
+```js
+//先讲工具方法
+//data_user = new Data(); //这是对外的一个数据缓存对象
+//data_priv = new Data(); //这是一个针对内部使用的一个数据缓存对象
+
+//acceptData, data, removeData, hasData这些方法最终调用的还是new Data()对象当中的方法，所以还是要重点了解这个Data对象
+
+Data.prototype = {
+	key //分配映射
+	set //怎样往cache中设置
+	get //怎样从cache中取值
+	access //这是个set和get的集合方法，如果传三个参数就会调用set方法；如果传两个参数，就会调用get方法
+	remove //怎样去除cache中的数据
+	hasData //判断cache中是否有某某数据
+	discard //删除cache下面的相应
+}
+```
+
+```js
+//JQ中的源码分析
+function Data(){
+	Object.defineProperty(this.cache = {}, 0, {
+		get: function(){
+			return {};
+		}
+	})
+}
+
+//========================
+var obj = {name: 'hello'};
+Object.freeze(obj); //obj只能获取，不能修改属性值
+obj.name = 'hi'; 
+alert(obj.name); //'hello'
+
+//=======================
+var obj = {name: 'hello'};
+Object.defineProperty(obj, 0, {
+	get: function(){
+		return {};
+	}
+});
+//defineProperty的三个参数：第一个是操作的对象，第二个参数0代表在obj下面添加了一个0这个属性，这个属性的值就是get方法所提供的
+//通过上面这种方式是只能获取不能设置的，因为没有写set方法
+alert(obj[0]);
+obj[0] = 123;
+alert(obj[0]); //并没有改为123
+```

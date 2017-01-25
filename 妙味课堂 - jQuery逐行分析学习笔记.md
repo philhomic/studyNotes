@@ -2467,7 +2467,9 @@ $('#div1').data('name', obj);
 $('body').data('age', obj);
 
 //首先$('#div1').data('name', obj)
-//第一步，找到div1的DOM节点，然后在上面生成一个自定义属性，这个自定义属性的值设为一个数字ID。
+//第一步，找到div1的DOM节点，然后在上面生成一个自定义属性，这个自定义属性的值设为一个数字标识。例如：
+//<div xxx="1"></div>
+//<body xxx="2"></div> 
 //这时候cache可能变成下面这种形式
 var cache = {
 	1: {
@@ -2554,9 +2556,20 @@ Object.defineProperty(obj, 0, {
 		return {};
 	}
 });
+this.expando = jQuery.expando + Math.random();
+//在这里为cache添加了一个属性0，该属性的值是一个空函数，而且是不能被修改的。
+//这里的expando其实就是为这个对象所设置的自定义属性，就相当于<div id="div1" jQuery203089541586732714850.884093129098725="1"></div>
+
+
 //defineProperty的三个参数：第一个是操作的对象，第二个参数0代表在obj下面添加了一个0这个属性，这个属性的值就是get方法所提供的
 //通过上面这种方式是只能获取不能设置的，因为没有写set方法
 alert(obj[0]);
 obj[0] = 123;
 alert(obj[0]); //并没有改为123
+
+//什么时候可能会出现cache[0]的情况呢？在源码中
+if(!Data.accepts(owner)){ return 0; }
+//那么!Data.accepts(owner)是什么情况呢？
+return owner.nodeType ? owner.nodeType === 1 || owner.nodeType === 9 : true;
+//owner这里就是代表对应的对象，如果ower是node节点的话，如果nodeType为1代表它是个元素，nodeType为9代表它是Document。这些都是在cache中分配1/2/3/4的，除此以外，其他的nodeType是不能分配标示的，也就对应着0，返回空的JSON。如果owner不是node节点，就是普通对象的话，那么是都可以分配数字标识的。
 ```

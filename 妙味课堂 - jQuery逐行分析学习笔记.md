@@ -2573,3 +2573,35 @@ if(!Data.accepts(owner)){ return 0; }
 return owner.nodeType ? owner.nodeType === 1 || owner.nodeType === 9 : true;
 //owner这里就是代表对应的对象，如果ower是node节点的话，如果nodeType为1代表它是个元素，nodeType为9代表它是Document。这些都是在cache中分配1/2/3/4的，除此以外，其他的nodeType是不能分配标示的，也就对应着0，返回空的JSON。如果owner不是node节点，就是普通对象的话，那么是都可以分配数字标识的。
 ```
+
+```js
+try {
+	descriptor[this.expando] = {value: unlock};
+	Object.defineProperties(owner, descriptor);
+} catch(e){
+	descriptor[this.expando] = unlock;
+	jQuery.extend(owner, descriptor);
+}
+
+//之所以要先尝试一下Object.defineProperties方法，如果不行，在使用jQuery.extend的方法是因为使用jQuery.extend这种方法，有可能人们会人为的更改这一属性，但是如果使用Object.defineProperties的方法，这个属性就不能被更改了。
+```
+
+```js
+//data()方法，设置是会一下子设置多个，但是获取，通常是获取第一个
+$(function(){
+	$('#div1').data('name', 'hello');
+	$('#div1').data('age', '30');
+
+	console.log($('#div1').data('name'));
+	console.log($('#div1').data()); //返回{'name': 'hello', 'age': '30'}
+})
+```
+
+```js
+//<div id="div1" data-miaov-all="妙味">aaa</div>
+//alert($('#div1').get(0).dataset.miaovAll); //"妙味" 
+$('#div1').data('name', 'hello');
+$('#div1').data('age', '30');
+console.log($('#div1').data()); //{name: "hello", age: "30", miaovAll: "妙味"}
+//jQuery会将元素上的HTML5的dataset也视为该元素的数据缓存
+```

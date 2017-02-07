@@ -24,7 +24,7 @@
 
 	(3184, 3295) support : 功能检测 //√
 
-	(3308, 3652) data() : 数据缓存
+	(3308, 3652) data() : 数据缓存 //√
 
 	(3653, 3797) queue() : 队列管理
 
@@ -2604,4 +2604,151 @@ $('#div1').data('name', 'hello');
 $('#div1').data('age', '30');
 console.log($('#div1').data()); //{name: "hello", age: "30", miaovAll: "妙味"}
 //jQuery会将元素上的HTML5的dataset也视为该元素的数据缓存
+```
+
+###(3653, 3797) queue() : 队列管理
+
+队列：先进先出
+
+```js
+//简化jQuery中queue的源码
+jQuery.extend({
+	queue
+	dequeue
+	_queueHooks
+})
+
+jQuery.fn.extend({
+	queue
+	dequeue
+	delay
+	clearQueue
+	promise
+})
+```
+
+```js
+//queue和dequeue，类似于array的push和shift操作，只不过往队列中存的必须是函数
+$(function(){
+	function aaa(){
+		alert(1);
+	}
+	function bbb(){
+		alert(2);
+	}
+
+	$.queue(document, 'q1', aaa); //在document上建立了名为q1的队列，队列中存了一个aaa的函数
+
+	$.queue(document 'q1', bbb); //队列中又存入了bbb函数
+
+	//以上两句相当于$.queue(document, 'q1', [aaa, bbb]);
+
+	console.log($.queue(document, 'q1')); //$.queue只写两个参数，就能返回这个队列 [aaa(), bbb()]
+
+	$.dequeue(document, 'q1'); //弹出1 出队不仅是取出位于头部的函数，而且还会调用该函数
+	$.dequeue(document, 'q1'); //弹出2
+})
+```
+
+```js
+//实例方法与工具方法是一回事
+$(function(){
+	function aaa(){
+		alert(1);
+	}
+	function bbb(){
+		alert(2);
+	}
+
+	$(document).queue('q1', aaa);
+	$(document).queue('q1', bbb);
+
+	console.log($(document.queue('q1'))); //[aaa(), bbb()]
+
+	$(document).dequeue(); //弹1
+	$(document).dequeue(); //弹2
+})
+```
+
+```js
+//<div id="div1"></div>
+//#div {width: 100px; height: 100px; background: red; position: absolute;}
+$(function(){
+	$('#div1').click(function(){
+		$(this).animate({width: 300}, 2000);
+		$(this).animate({height: 300}, 2000);
+		$(this.animate({left: 300}, 2000));
+		//以上运动是依次完成的，而不是同时进行的，这就利用了队列管理
+	})
+})
+```
+
+queue比Deferred更强大。Deferred是针对一个异步的进行管理，queue是对多个异步进行管理。
+
+```js
+$(function(){
+	$('#div1').click(function(){
+		//$(this).animate({width: 300}, 2000).animate({left: 300}, 2000);
+		
+		//$(this).animate({width: 300}, 2000).queue('fx',function(){}).animate({left: 300}, 2000);
+		//以上在宽度变为300之后，就不再继续执行了，因为在为fx队列添加了一个函数之后，没有出队操作，因此队列后面的函数都不会执行
+
+		$(this).animate({width: 300}, 2000).queue('fx',function(){
+			//fx是默认的队列名称
+			$(this).dequeue();
+		}).animate({left: 300}, 2000);
+		//以上这样就可以变完width再改变left了
+
+	})
+//=========================
+	$('#div1').click(function(){
+		$(this).animate({width: 300}, 2000).queue(function(next){
+			next(); //与 $(this).dequeue(); 是一回事
+		}).animate({left: 300}, 2000);
+	})
+//==========================
+	$('#div1').click(function(){
+		$(this).animate({width: 300}, 2000).queue(function(next){
+			$(this).css('height', 300);
+			next()
+		}).animate({left: 300}, 2000);
+	})
+	//以上代码，#div1先慢慢变成宽300，然后突然变为高300，然后慢慢移动为left 300.
+//==========================
+//以上效果，利用animate的回调也同样可以实现这个效果
+	$('#div1').click(function(){
+		$(this).animate({width: 300}, 2000, function(){
+			$(this).css('height', 300);
+		}).animate({left: 300}, 2000);
+	})
+	
+//虽然回调也可以做，但是队列管理是更强大的，例如我们做一个更为复杂的
+	$('#div1').click(function(){
+		$(this).animage({width: 300}, 2000, function(){
+			//$(this)css('height', 300);
+			var This = this;
+			var timer = setInterval(function(){
+				This.style.height = This.offsetHeight + 1 + 'px';
+				if(This.offsetHeight == 200){
+					clearInterval(timer);
+				}
+			}, 30)
+		}).animate({left: 300}, 2000);
+	})
+	//如果写成上面这个样子，就会发现，当宽度变化之后，高度和left是同时变化的，这是回调中开的是定时器，这个定时器不会影响后续操作，所以定时器运行的时候，后面的left也会操作，但是如果用入队和出队就不会出问题了
+//==========================
+	$('#div1').click(function(){
+		$(this).animate({width: 300}, 2000).queue(function(next){
+			var This = this;
+			var timer = setInterval(function(){
+				This.style.height = This.offsetHeight + 1 + 'px';
+				if(This.offsetHeight == 200){
+					next();
+					clearInterval(timer);
+				}
+			}, 30);
+		}).animate({left: 300}, 2000);
+	});
+	//这个时候，就是宽变完了变高，高变完了变left
+})
 ```

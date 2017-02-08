@@ -26,7 +26,7 @@
 
 	(3308, 3652) data() : 数据缓存 //√
 
-	(3653, 3797) queue() : 队列管理
+	(3653, 3797) queue() : 队列管理 //√
 
 	(3803, 4299) attr() prop() val() addClass等 : 对元素属性的操作
 
@@ -2751,4 +2751,96 @@ $(function(){
 	});
 	//这个时候，就是宽变完了变高，高变完了变left
 })
+```
+
+```js
+//队列的delay实例方法
+$(function(){
+	$('#div1').click(function(){
+		$(this).animate({width: 300}, 2000).delay(2000).animate({left: 300}, 2000)
+	})
+	//delay能让队列延迟执行
+})
+```
+
+```js
+//队列的promise实例方法
+$(function(){
+	$('#div1').click(function(){
+		$(this).animate({width: 300}, 2000).animate({left: 300}, 2000)
+	})
+	$(this).promise().done(function(){
+		alert(123);
+	}); //promise的作用就是当所有的运动结束之后，再来调用后面的方法
+})
+```
+
+###(3803, 4299) attr() prop() val() addClass等:对元素属性的操作
+
+```js
+jQuery.fn.extend({
+	attr
+	removeAttr
+	prop
+	removeProp
+	addClass
+	removeClass
+	toggleClass
+	hasClass
+	val
+})
+
+jQuery.extend({ //这些工具方法大多是内部使用的，外部使用很少
+	valHooks
+	attr
+	removeAttr
+	attrHooks
+	propFix
+	prop
+	propHooks
+})
+```
+
+```js
+//attr, removeAttr, prop, removeProp的基本使用
+//<div id="div1">aaaaaaaa</div>
+$(function(){
+	$('#div1').attr('title', 'hello'); //设置
+	alert($('#div1').attr('id')); //获取
+	$('#div1').prop('title', 'hello'); //设置
+	alert($('#div1').prop('id')); //获取
+	//attr和prop的差别：要了解原生js中的setAttribute()、.或[]两种设置属性的方法。
+
+	/*var oDiv = document.getElementById('div1');
+	oDiv.setAttribute('title', 'hello'); 
+	oDiv.title = 'hello';
+	oDiv['title'] = 'hello';*/
+
+	//针对自定义属性的时候，两种设置会有差别。因为title是元素本身带有的属性，所以两种设置方法没有差别。
+
+	$('#div1').attr('miaov', 'hello'); //属性加上去了
+	$('#div1').prop('miaov', 'hello'); //自定义属性在标签上体现不出来
+
+	$('#div1').attr('miaov'); //可以获取自定义属性
+	$('#div1').prop('miaov'); //不一定能获取到自定义属性
+})
+```
+
+```js
+//<a id="a1" miaov="妙味" href="miaov.com">aaaaaa</a>
+	$('#a1').attr('href'); //得到 miaov.com
+	$('#a1').prop('href'); //得到 完整的包含本地的地址
+```
+
+```js
+//removeAttr, removeProp
+$('#div1').attr('miaov', 'hello');
+$('#div1').removeAttr('miaov');
+$('#div1').attr('miaov'); //为空，因为上面一句已经将miaov属性删掉了
+```
+
+```js
+//实例方法中的attr其实调用的是工具方法中的attr
+//实例方法中的removeAttr调用的是工具方法removeAttr
+//实例方法中的prop调用的是工具方法的prop
 ```

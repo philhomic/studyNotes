@@ -125,7 +125,7 @@ a1.css();
 //jQuery的return new jQuery.fn.init()，直接在创建对象的时候，就将init函数执行掉了
 
 //...
-jQuery.fn.init.prototype = jQuery.fn; //jQuery.fn.init的原型就是jQuery的原型，所以可以用new
+jQuery.fn.init.prototype = jQuery.fn; //jQuery.fn.init的原型就是jQuery的原型，所以可以用new，而且jQuery原型上有的东西，new一个jQuery.fn.init()之后得到的对象上也都有
 ```
 
 匹配数字的正则
@@ -1764,7 +1764,7 @@ optionsCache = {
 //回调函数中的一些特殊情况
 //下例是针对Callback源码中的stack的作用
 var bBtn = true;
-function aaa(){ 
+function aaa(){
 	alert(1);
 	//cb.fire(); //这样会造成死循环；而且bbb永远也走不到
 
@@ -1789,7 +1789,7 @@ function aaa(){ alert(1); }
 function bbb() { alert(2); }
 
 var cb = $.Callback('once');
-cb.add(aaa); 
+cb.add(aaa);
 cb.fire(); //只会弹出1，然后下面即使加入bbb，也不会弹出2。因为当初传入了once
 cb.add(bbb);
 cb.fire(); //这个不会触发，因为前一次cb触发过之后，由于once就不再触发了
@@ -1800,7 +1800,7 @@ function aaa(){ alert(1); }
 function bbb() { alert(2); }
 
 var cb = $.Callback('once memory');
-cb.add(aaa); 
+cb.add(aaa);
 cb.fire(); //弹出1/2
 cb.add(bbb);
 cb.fire(); //这里就相当于cb.fire([]) //看Callbacks源码，这时候的list数组被清空了
@@ -2017,7 +2017,7 @@ $(function(){
 		alert(111);
 		dfd.resolve();
 	}, 1000);
-	
+
 	dfd.done(function(){
 		alert('aaa');
 	})
@@ -2086,7 +2086,7 @@ function aaa(){
 	setTimeout(function(){
 		dfd.resolve();
 	}, 1000);
-	
+
 	return dfd;
 }
 
@@ -2104,7 +2104,7 @@ function aaa(){
 	setTimeout(function(){
 		dfd.resolve();
 	}, 1000);
-	
+
 	return dfd;
 }
 
@@ -2126,7 +2126,7 @@ function aaa(){
 	setTimeout(function(){
 		dfd.resolve();
 	}, 1000);
-	
+
 	return dfd.promise(); //使用这种方式，状态不会被改变
 }
 
@@ -2149,7 +2149,7 @@ newDfd.reject();
 //延迟对象的状态
 function aaa(){
 	var dfd = $.Deferred();
-	
+
 	alert(dfd.state());
 
 	setTimeout(function(){
@@ -2222,9 +2222,9 @@ setTimeout(function(){
 	dfd.reject('hi'); //这里就是利用了fire能传参
 }, 1000);
 dfd.then(function(){
-	alert(1); 
+	alert(1);
 }, function(){
-	alert(arguments[0]); 
+	alert(arguments[0]);
 });
 //弹出hi
 ```
@@ -2469,7 +2469,7 @@ $('body').data('age', obj);
 //首先$('#div1').data('name', obj)
 //第一步，找到div1的DOM节点，然后在上面生成一个自定义属性，这个自定义属性的值设为一个数字标识。例如：
 //<div xxx="1"></div>
-//<body xxx="2"></div> 
+//<body xxx="2"></div>
 //这时候cache可能变成下面这种形式
 var cache = {
 	1: {
@@ -2546,7 +2546,7 @@ function Data(){
 //========================
 var obj = {name: 'hello'};
 Object.freeze(obj); //obj只能获取，不能修改属性值
-obj.name = 'hi'; 
+obj.name = 'hi';
 alert(obj.name); //'hello'
 
 //=======================
@@ -2599,7 +2599,7 @@ $(function(){
 
 ```js
 //<div id="div1" data-miaov-all="妙味">aaa</div>
-//alert($('#div1').get(0).dataset.miaovAll); //"妙味" 
+//alert($('#div1').get(0).dataset.miaovAll); //"妙味"
 $('#div1').data('name', 'hello');
 $('#div1').data('age', '30');
 console.log($('#div1').data()); //{name: "hello", age: "30", miaovAll: "妙味"}
@@ -2689,7 +2689,7 @@ queue比Deferred更强大。Deferred是针对一个异步的进行管理，queue
 $(function(){
 	$('#div1').click(function(){
 		//$(this).animate({width: 300}, 2000).animate({left: 300}, 2000);
-		
+
 		//$(this).animate({width: 300}, 2000).queue('fx',function(){}).animate({left: 300}, 2000);
 		//以上在宽度变为300之后，就不再继续执行了，因为在为fx队列添加了一个函数之后，没有出队操作，因此队列后面的函数都不会执行
 
@@ -2721,7 +2721,7 @@ $(function(){
 			$(this).css('height', 300);
 		}).animate({left: 300}, 2000);
 	})
-	
+
 //虽然回调也可以做，但是队列管理是更强大的，例如我们做一个更为复杂的
 	$('#div1').click(function(){
 		$(this).animage({width: 300}, 2000, function(){
@@ -2812,7 +2812,7 @@ $(function(){
 	//attr和prop的差别：要了解原生js中的setAttribute()、.或[]两种设置属性的方法。
 
 	/*var oDiv = document.getElementById('div1');
-	oDiv.setAttribute('title', 'hello'); 
+	oDiv.setAttribute('title', 'hello');
 	oDiv.title = 'hello';
 	oDiv['title'] = 'hello';*/
 

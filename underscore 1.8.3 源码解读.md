@@ -432,7 +432,7 @@ _.contains = _.includes = _.include = function(obj, item, fromIndex, guard){
 }
 ```
 
-**☆ 这里的guard是干什么用的？**
+其他方法中的guard，通常是为了让方法能在`_.map`方法中使用而设计的。但是此处及时没有这个guard，也不妨碍`_.contains`在`_.map`中的使用。但是guard的作用正如其英文的意义所言，就是一道防线。例如：`_.contains`在作为参数传入到其他方法中时，万一正好在"fromIndex"的这个位置，传入的并不是我们真正想要的值，这时候由于guard的存在，依然能够正确地将fromIndex设置为默认值0，避免发生错误。
 
 ###_.invoke(list, methodName, *arguments)
 
@@ -977,6 +977,108 @@ _.difference = function(array){
 }
 ```
 
+###_.uniq(array, [isSorted], [iteratee])
+
+该方法会产生一个没有重复项的数组。如果事先知道传入的第一个参数数组是已经排序的，那么可以在isSorted的参数位置传入`true`，这样会使用一种更为快速的算法。如果是否是唯一的标准是iteratee运行在数组之中每一项的结果决定的，那么就传入iteratee参数。
+
+```javascript
+_.uniq([1, 2, 1, 4, 1, 3]); //[1, 2, 4, 3]
+_.uniq([1, 2, 3, 4, 5], false, function(n){ return n % 2; }); //[1, 2]
+```
+
+源码：
+
+```javascript
+_.uniq = _.unique = function(array, isSorted, iteratee, context){
+    if(!_.isBoolean(isSorted)){
+        context = iteratee;
+        iteratee = isSorted;
+        isSorted = false;
+    }
+    if(iteratee != null) iteratee = cb(iteratee, context);
+    var result = [];
+    var seen = [];
+    for(var i = 0, length = getLength(array); i < length; i++){
+        var value = array[i],
+            computed = iteratee ? iteratee(value, i, array) : value;
+        if(isSorted){
+            if(!i || seen !== computed) result.push(value);
+            seen = computed;
+        } else if(iteratee){
+            if(!_.contains(seen, computed)){
+                seen.push(computed);
+                result.push(value);
+            }
+        } else if(!_.contains(result, value)){
+            result.push(value);
+        }
+    }
+    return result;
+}
+```
+
+看到上面的写法，感觉有一点问题。例如：
+
+```javascript
+_.uniq([1, 2, 3, 4, 5], true, function(n){return n%2; });
+//[1, 2, 3, 4, 5]
+_.uniq([1, 2, 3, 4, 5], false, function(n){return n%2; });
+//[1, 2]
+```
+
+可见，以上情况中，当isSorted传入false使，返回的是我们想要的结果，但是传入true是，是错误的结果。这是因为，在源码中，当1经过iteratee之后，得到的数值为1，那么这时候seen就保存为0了，然后将1加入到result中去了。接下来，2经过iteratee的0。这个computed的0不等于seen的1，于是2也被加入到result中去了，同时seen又被存成了0。接下来到3，经过iteratee，得到的computed又变成了1，与seen的0不相等，于是3又被存到result中去了。以此类推。
+
+所以isSorted这个参数一定要慎用。而且这里究竟是看谁是sorted的？如果是看传入的第一个参数数组是否是sorted，这个经上例来看并不靠谱。这个isSorted当iteratee存在的时候，应该是看iteratee在每一项上走一遍，得到的结果所产生的的数组是否是sorted才对。
+
+
+
+
+
+
+
+
+
+###_.zip(*arrays)
+
+该方法将数组中每一项的值，按照对应位置拼在一起。如果你要操作的是一个嵌套的矩阵的话，那么这个方法可以用于转置矩阵。
+
+```javascript
+_.zip(['moe', 'larry', 'curly'], [30, 40, 50], [true, false, false]);
+//[["moe", 30, true], ["larry", 40, false], ["curly", 50, false]]
+```
+
+源码：
+
+```javascript
+_.zip = function(){
+    return _.unzip(arguments);
+}
+```
+
+可见：`_.zip`源码中引用了`_.unzip`
+
+###_.unzip(array)
+
+与`_.zip`的用法正好相反。为`_.unzip`传入一个数组的数组，返回的是一系列新数组。第一个数组中包含的是原来所有数组中的第一个元素；第二个数组包含原来所有数组中的第二个元素；以此类推。
+
+```javascript
+_.unzip([["moe", 30, true], ["larry", 40, false], ["curly", 50, false]]);
+//[['moe', 'larry', 'curly'], [30, 40, 50], [true, false, false]]
+```
+
+源码：
+
+```javascript
+_.unzip = function(array){
+    var length = array && _.max(array, getLength).length || 0;
+    var result = Array(length);
+
+    for(var index = 0; index < length; index++){
+        result[index] = _.pluck(array, index);
+    }
+    return result;
+}
+```
 
 
 

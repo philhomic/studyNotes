@@ -1274,6 +1274,93 @@ _.range = function(start, stop, step){
 }
 ```
 
+##用于函数的一些方法
+
+###_.bind(function, obj, *argument)
+
+```javascript
+var func = function(greeting){
+	return greeting + ': ' + this.name
+}
+func = _.bind(func, {name: 'moe'}, 'hi');
+func(); //'hi: moe'
+```
+
+```javascript
+//确定一个函数究竟是作为构造函数来运行，还是作为普通函数来运行
+var executeBound = function(sourceFunc, boundFunc, context, callingContext, args){
+
+	if(!(callingContext instanceof boundFunc)){
+		return sourceFunc.apply(context, args);
+	}
+	var self = baseCreate(sourceFunc.prototype);
+	var result = sourceFunc.apply(self, args);
+	if(_.isObject(result)) return result;
+	return self;
+}
+
+_.bind = function(func, context){
+	if(nativeBind && func.bind === nativeBind){
+		return nativeBind.apply(func, slice.call(arguments, 1));
+	}
+
+	if(!_.isFunction(func)){
+		throw new TypeError('Bind must be called on a function');
+	}
+
+	var args = slice.call(arguments, 2);
+	var bound = function(){
+		return executeBound(func, bound, context, this, args.concat(slice.call(arguments)));
+	}
+	return bound;
+}
+```
+
+以上代码中要着重理解executeBound函数。
+
+```javascript
+//举个例子：
+var sourceFunc = function(age, sex){
+	console.log('name in context: ' + this.name);
+	console.log('argument: ' + age);
+	console.log('argument: ' + sex);
+}
+var boundFunc = sourceFunc.bind({name: 'moe'}, 12);
+boundFunc('male');
+//name in context: moe
+//argument: 12
+//argument: male
+//其中 context指的就是要绑定的this，在这个例子中，这个context是{name: 'moe'}
+//callingContext就是被绑定的函数执行时候的this，在这个例子中，boundFunc执行时的this是全局变量
+//再看下面的判断
+if(!(callingContext instanceof boundFunc)){
+	return sourceFunc.apply(context, args);
+}
+//上面举得例子 callingContext并不是boundFunc的实例，因此executeBound返回的就是简单的sourceFunc绑定context上下文以及其他参数，这没什么好说的
+```
+
+```javascript
+//再看一个例子
+var sourceFunc = function(age, sex){
+	console.log('name in context: ' + this.name);
+	console.log('argument: ' + age);
+	console.log('argument: ' + sex);
+}
+var boundFunc = sourceFunc.bind({name: 'moe'}, 12);
+var boundFuncInstance = new boundFunc('male');
+//name in context: undefined
+//argument: 12
+//argument: male
+//我们看到，当使用new来调用boundFunc的时候，会生成boundFunc的实例，new出来的这个实例就是this。由于这个this中没有定义name属性，所以打印出来的name in context是undefined。这说明，当boundFunc是用new来调用的话，原来的那种bind方式就行不通了，context（此例中就是{name: 'moe'}）根本就没有绑定到boundFunc上去。因此，executeBound提供了另外一种方法。即：
+var self = baseCreate(sourceFunc.prototype);
+var result = sourceFunc.apply(self, args);
+if(_.isObject(result)) return result;
+return self;
+//baseCreate(sourceFunc.prototype)就是基于sourceFunc的原型来创造一个对象出来。此例中sourceFunc的prototype就是Object，因此self就是Object.create(Object.prototype)，创造出来的就是一个空对象。
+```
+
+上面executeBound没看懂，明天继续看！！！上面代码块里面有些问题！
+
 
 
 

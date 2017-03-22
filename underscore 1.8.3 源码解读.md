@@ -1030,13 +1030,49 @@ _.uniq([1, 2, 3, 4, 5], false, function(n){return n%2; });
 
 所以isSorted这个参数一定要慎用。而且这里究竟是看谁是sorted的？如果是看传入的第一个参数数组是否是sorted，这个经上例来看并不靠谱。这个isSorted当iteratee存在的时候，应该是看iteratee在每一项上走一遍，得到的结果所产生的的数组是否是sorted才对。
 
+###_.union(*arrays)
 
+传入多个数组，然后返回一个数组，这个数组里面包含所有数组里面的元素，而且是去重了的。顺序就是按照原本在各数组中出现的顺序。
 
+```javascript
 
+_.union([1, 2, 3], [101, 2, 1, 10], [2, 1]); //[1, 2, 3, 101, 10]
+```
 
+源码：
 
+```javascript
 
+_.union = function(){
+    return _.uniq(flatten(arguments, true ,true));
+}
+```
 
+###_.intersection = function(*array)
+
+传入多个数组，返回一个数组，其中的元素在那多个数组中都出现过。
+
+```javascript
+_.intersection([1, 2, 3], [101, 2, 1, 10], [2, 1]); //[1, 2]
+```
+
+源码：
+
+```javascript
+_.intersection = function(array){
+    var result = [];
+    var argsLength = arguments.length;
+    for(var i = 0, length = getLength(array); i < length; i++){
+        for item = array[i];
+        if(_.contains(result, item)) continue;
+        for(var j = 1; j < argsLeng; j++){
+            if(!_.contains(arguments[j], item)) break;
+        }
+        if(j === argsLength) result.push(item);
+    }
+    return result;
+}
+```
 
 ###_.zip(*arrays)
 
@@ -1079,6 +1115,165 @@ _.unzip = function(array){
     return result;
 }
 ```
+
+###_.object(list, [value])
+
+将数组转为对象。如果有重复的键名存在的话，取最后出现的键值。
+
+```javascript
+_.object(['moe', 'larry', 'curly'], [30, 40, 50]); // {moe: 30, larry: 40, curly: 50}
+_.object([['moe', 30], ['larry', 40], ['curly', 50]]); // {moe: 30, larry: 40, curly: 50}
+```
+
+```javascript
+_.object = function(list, values){
+    var result = {};
+    for(var i = 0, length = getLength(list); i < length; i++){
+        if(values){
+            result[list[i]] = values[i];
+        } else {
+            result[list[i][0]] = list[i][1];
+        }
+    }
+    return result;
+}
+```
+
+###_.findIndex(array, predicate, [context])
+
+从左向右，找到第一个通过predicate的元素的index
+
+```javascript
+_.findIndex([4, 6, 8, 12], isPrime); //-1
+_.findIndex([4, 6, 7, 12], isPrime); //2
+```
+
+```javascript
+function createPredicateIndex(dir){ //dir代表方向，1为从左向右，-1为从右向左
+    return function(array, predicate, context){
+        predicate = cb(predicate, context);
+        var length = getLength(array);
+        var index = dir > 0 ? 0 : length - 1;
+        for(; index >= 0 && index < length; index += dir){
+            if(predicate(array[index], index, array)) return index;
+        }
+        return -1;
+    }
+}
+
+_.findIndex = createPredicateIndexFinder(-1);
+```
+
+###_.findLastIndex(array, predicate, [context])
+
+从右向左，找到第一个通过predicate的元素的index
+
+```javascript
+_.findLastIndex = createPredicateIndexFiner(-1);
+```
+
+###_.sortedIndex(list, value, [iteratee], [context])
+
+利用binary search来确定，这个value应该查到list的什么位置，并保持list的排序状态。如果iteratee提供了的话，那么排序依据就是list中各元素和value经过iteratee运行后的值。iteratee也可以是字符串类型，这时候它代表的就是list各项以及value的一个属性名。
+
+```javascript
+_.sortedIndex([10, 20, 30, 40, 50], 35); //3
+
+var stooges = [{name: 'moe', age: 40}, {name 'curly', age: 60}];
+_.sortedIndex(stooges, {name: 'larry', age: 50}, 'age'); //1
+```
+
+```javascript
+_.sortedIndex = function(array, obj, iteratee, context){
+    iteratee = cb(iteratee, context, 1);
+    var value = iteratee(obj);
+    var low = 0, high = getLength(array);
+    while(low < high){
+        var mid = Math.floor((low + high)/2);
+        if(iteratee(array[mid]) < value) low = mid + 1; else high = mid;
+    }
+    return low;
+}
+```
+
+从源码中我们看出，这个sortedIndex默认排序顺序就是升序的。因此会出现下面的结果：
+
+```javascript
+_.sortedIndex([5, 4, 3, 2, 1], 2.5); // 0 不是我们想要的结果
+_.sortedIndex([1, 2, 3, 4, 5], 2.5); // 2
+```
+
+###_.indexOf(array, value, [isSorted])
+
+返回value在array中的index，如果没有找到就返回-1。如果这个数组很大，而且你知道它是排序好了的，那么就可以在isSorted这里传入true，这样会使用binary search方法。参数第三个位置可以传入一个数字，代表从这个数字之后开始寻找匹配value的index
+
+```javascript
+_.indexOf([1, 2, 3], 2); // 1
+```
+
+```javascript
+function createIndexFiner(dir, predicateFind, sortedIndex){
+    return function(array, item, idx){
+        var i = 0, length = getLength(array);
+        if(typeof idx == 'number'){
+            if(dir > 0){
+                i = idx > 0 ? idx : Math.max(idx + length, i);
+            } else {
+                length = idx >= 0 ? Math.min(idx + 1, length) : idx + length + 1
+            }
+        } else if(sortedIndex && idx && length){
+            idx = sortedIndex(array, item);
+            return array[idx] === item ? idx : -1
+        }
+        if(item !== item){
+            idx = predicateFind(slice.call(array, i, length), _.isNaN);
+            return idx >= 0 ? idx + i : -1;
+        }
+        for(idx = dir > 0 ? i : length - 1; idx >= 0 && idx < length; idx += dir){
+            if(array[idx] === item) return idx;
+        }
+        return -1
+    }
+}
+
+_.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
+```
+
+###_.lastIndexOf
+
+```javascript
+createIndexFiner(-1, _.findLastIndex);
+```
+
+###_.range([start], stop, [step])
+
+start如果没有传入的话，默认为0；step默认为1。该方法会返回一个由整数组成的数组，从start（含）开始，到stop（不含）结束。整数间距为step。注意，如果stop比start还要小的话，那么就会返回空数组。因此，如果你想得到一个负数组成的数组，请将step设为负值。
+
+```javascript
+_.range(10); //[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+_.range(1, 11); //[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+_.range(0, 30, 5); //[0, 5, 10, 15, 20, 25]
+_.range(0, -10, -1); //[0, -1, -2, -3, -4, -5, -6, -7, -8, -9]
+_.range(0); //[]
+```
+
+```javascript
+_.range = function(start, stop, step){
+    if(stop == null){
+        stop = start || 0;
+        start = 0;
+    }
+    step = step || 1;
+    var length = Math.max(Math.ceil((stop - start) / step), 0);
+    var range = Array(length);
+
+    for(var idx = 0; idx < length; idx++, start += step){
+        range[idx] = start;
+    }
+    return range;
+}
+```
+
 
 
 

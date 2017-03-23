@@ -1,6 +1,6 @@
-#underscore 1.8.3 源码解读
+# underscore 1.8.3 源码解读
 
-##一些基本设置 
+## 一些基本设置 
 
 underscore的源码总体结构是 `function(){}.call(this)`
 
@@ -10,7 +10,7 @@ var root = this;
 
 在浏览器环境下，this就是`window`，如果是在node环境下，this就是`exports`
 
-###`_`构造函数
+### `_`构造函数
 
 ```javascript
 var _ = function(obj){
@@ -22,7 +22,7 @@ var _ = function(obj){
 
 上述代码中我们看到了 `new` ，这说明 _ 这个函数其实是一个构造函数。代码写到这里，如果我们为这个构造函数传入一个对象 `[1, 2, 3]` 会得到一个 _ 的实例对象：`{_wrapped: [1, 2, 3]}`，该实例的 constructor 就是 _，而原型就是Object。如果我们对 `_(_([1, 2, 3]))`求值，得到的还是 `{_wrapped: [1, 2, 3]}`，因为已经是 _ 的实例，就直接把这个对象返回了。
 
-###optimizeCb
+### optimizeCb
 
 ```javascript
 var optimizeCb = function(func, context, argCount){
@@ -53,7 +53,7 @@ void实际上是一个运算符，什么东西经过它运算之后，都会返�
 
 在`optimizeCb`中，如果传入了context，并且argCount没有传入或者传入的argCount是1、2、3或4，返回的都是`func.call(context, ...)`。当argCount大于4个时，才返回`func.apply(context, arguments)`。网上有解释说因为call的效率要比apply高很多。参考：https://segmentfault.com/q/1010000007894513
 
-###cb
+### cb
 
 ```javascript
 var cb = function(value, context, argCount){
@@ -64,7 +64,7 @@ var cb = function(value, context, argCount){
 }
 ```
 
-###_.identity
+### _.identity
 
 `_.identity`这个函数的作用就是将传入的值原样返回。
 ```
@@ -72,7 +72,7 @@ var stooge = {name: 'moe'};
 stooge === _.identity(stooge); //true
 ```
 
-###_.matcher
+### _.matcher
 
 `_.matcher(attrs)`这个函数的作用就是返回一个predicate function，这个predicate function接收object作为参数之后，返回值就是是否这个object包含attrs中的所有键值对属性。
 ```javascript
@@ -81,7 +81,7 @@ func({name: "Amanda", age: 18}); //false
 func({name: "Amanda", age: 17, sex: "female"}); //true
 ```
 
-###_.property
+### _.property
 
 `_.property(key)`这个函数的作用就是返回一个函数，这个函数接收一个object作为参数之后，返回这个object中key属性的值。
 ```javascript
@@ -89,7 +89,7 @@ var stooge = {name: 'moe'};
 _.property('name')(stooge); //'moe'
 ```
 
-###_.iteratee
+### _.iteratee
 
 ```javascript
 _.iteratee = function(value, context){ return cb(value, context, Infinity); }
@@ -102,7 +102,7 @@ _.iteratee的用法跟作用其实跟内部的cb差不多。分为下面四种�
 - 传入的是对象`_.iteratee(obj)`，那么返回的就是`_.matcher(obj)`，也就是一个predicate函数，这个函数会判断所传入的参数是否包含obj所有的key/value键值对
 	- 传入的是其他值，如`_.iteratee(prop)`，返回的是`_.property(prop)`函数，这个函数会返回传入参数的属性为prop的值。
 
-###createAssigner
+### createAssigner
 
 ```javascript
 var createAssigner = function(keysFunc, undefinedOnly){
@@ -126,7 +126,7 @@ var createAssigner = function(keysFunc, undefinedOnly){
 createAssigner是一个创建赋值函数的函数，它的返回值是一个function。而且这是一个经典闭包，undefinedOnly这个参数是在返回函数之外的，但是在返回函数内会用到。
 createAssigner中的keysFunc其实传入的是`_.keys`或`_.allkeys`。分别来看一下这两个函数：
 
-###_.keys
+### _.keys
 
 ```javascript
 _.keys = function(obj){
@@ -139,7 +139,7 @@ _.keys = function(obj){
 }
 ```
 
-###_.allKeys
+### _.allKeys
 
 ```javascript
 _.allKeys = function(obj){
@@ -190,7 +190,7 @@ function collectNonEnumProps(obj, keys){
 
 用到createAssigner的有下面三个方法：
 
-###_.extend, _.extendOwn, _.defaults
+### _.extend, _.extendOwn, _.defaults
 
 ```javascript
 _.extend = createAssigner(_.allKeys); //不管三七二十一，后面的obj上的属性（包括自己的和原型链上的）都拷贝过来
@@ -200,7 +200,7 @@ _.defaults = createAssigner(_.allKeys, true); //拷贝后面obj上的所有属�
 
 可以看出，underscore中的`_.extend`，`_.extendOwn`，`_.defaults`实现的都是浅拷贝。
 
-###baseCreate
+### baseCreate
 
 ```javascript
 var baseCreate = function(prototype){
@@ -224,9 +224,9 @@ var isArrayLike = function(collection){
 
 在underscore中，只有一个对象具备length属性，并且length属性的值是数字，并且是在最大范围允许的情况下，就被认为这个对象是arraylike的。
 
-##用于集合的一些方法
+## 用于集合的一些方法
 
-###_.each(list, iteratee, [context])
+### _.each(list, iteratee, [context])
 
 对集合中的每一项进行iteratee的操作
 
@@ -248,7 +248,7 @@ _.each = _.forEach = function(obj, iteratee, context){
 };
 ```
 
-###_.map(list, iteratee, [context])
+### _.map(list, iteratee, [context])
 
 对list中的每一项进行iteratee的操作，将新生成的数组返回
 
@@ -281,7 +281,7 @@ _.map({ first: {'a': 1, 'b': 2}, second: {'b': 2, 'c': 3}, third: {'a': 1, 'c': 
 _.map({ first: {'a': 1, 'b': 2}, second: {'b': 2, 'c': 3}, third: {'a': 1, 'c': 3}}, 'b') //[2, 2, undefined]
 ```
 
-###_.reduce(list, iteratee, [memo], [context]), _.reduceRight(list, iteratee, [memo], [context])
+### _.reduce(list, iteratee, [memo], [context]), _.reduceRight(list, iteratee, [memo], [context])
 
 将list中的每一项通过iteratee的方法叠加起来，如果传入memo的话，那么memo是默认的初始值，如果没有传入memo，那么在_.reduce中是第一项、_.reduceRight中是最后一项作为初始值
 
@@ -320,7 +320,7 @@ _.reduce([1, 2, 3], function(a, b){ return a + b; }, 10); //16
 _.reduce([1, 2, 3], function(a, b){ return '' + a + b; }); //'321'
 ```
 
-###_.find(list, predicate, [context])
+### _.find(list, predicate, [context])
 
 //返回list中第一个能通过predicate的项
 
@@ -339,7 +339,7 @@ _.find = _.detect = function(obj, predicate, context){
 可以看到这个方法其实是分别调用了`_.findIndex`和`_.findKey`两个方法。这两个方法到后面看到对于数组和对象的操作时，再分别说。
 
 
-###_.filter(list, predicate, [context])
+### _.filter(list, predicate, [context])
 
 将list中能够通过predicate的所有项组成一个数组返回
 
@@ -362,7 +362,7 @@ _.filter([[1, 2, 3], [2, 3, 1], [3, 1, 2]], 2) //会返回整个[[1, 2, 3], [2, 
 _.filter([[1, 2, 0], [2, 3, 0], [3, 1, 2]], 2) //这时候返回的就是[[3, 1, 2]]
 ```
 
-###_.reject(list, predicate, [context])
+### _.reject(list, predicate, [context])
 
 与_.filter方法相反，返回的数组是由那些通不过predicate的项组成的
 
@@ -382,7 +382,7 @@ _.negate = function(predicate){
 }
 ```
 
-###_.every(list, [predicate], context)
+### _.every(list, [predicate], context)
 
 如果list中的每一项都通过了predicate，那么就返回true，否则返回false
 
@@ -401,7 +401,7 @@ _.every = _.all = function(obj, predicate, context){
 
 注意，在这个方法中predicate也可以不传的，不传的话，就是看list中的每一项本身是否为真。predicate除了是function以外，也可以传对象，那么就是看各项是否都包含该对象的键值对；也可以传数值或字符串，那就是看各项中以该数值/字符串为key的值是否都为真。
 
-###_.some(list, [predicate], [context])
+### _.some(list, [predicate], [context])
 
 list中，只有有一项可以通过predicate，那么就返回真，否则就返回假。
 
@@ -420,7 +420,7 @@ _.some = _.any = function(obj, predicate, context){
 
 写法与_.every方法极为类似，不再赘述。
 
-###_.contains(list, value, [fromIndex])
+### _.contains(list, value, [fromIndex])
 
 如果value存在于list中，那么返回true。可以传入fromIndex来确定从哪里开始检索list。
 
@@ -434,7 +434,7 @@ _.contains = _.includes = _.include = function(obj, item, fromIndex, guard){
 
 其他方法中的guard，通常是为了让方法能在`_.map`方法中使用而设计的。但是此处及时没有这个guard，也不妨碍`_.contains`在`_.map`中的使用。但是guard的作用正如其英文的意义所言，就是一道防线。例如：`_.contains`在作为参数传入到其他方法中时，万一正好在"fromIndex"的这个位置，传入的并不是我们真正想要的值，这时候由于guard的存在，依然能够正确地将fromIndex设置为默认值0，避免发生错误。
 
-###_.invoke(list, methodName, *arguments)
+### _.invoke(list, methodName, *arguments)
 
 在list的每一项上调用名为methodName的函数，如果有额外的参数，可以在后面传进去，在调用methodName的函数的时候，会转传进去。
 
@@ -471,7 +471,7 @@ _.invoke([[3, 1, 2], [5, 7, 8, 2]], 'concat', 'a', 'b', 'c') //[[3, 1, 2, 'a', '
 _.invoke([[3, 1, 2], [5, 7, 8, 2]], 'push', 'a', 'b', 'c') //[6, 7] 返回[6, 7]是因为push方法返回的值是新数组的长度
 ```
 
-###_.pluck(list, propertyName)
+### _.pluck(list, propertyName)
 
 将list中，属性名为propertyName的值都抽出来组成一个数组返回。
 
@@ -489,7 +489,7 @@ _.pluck(stooges, 'name');
 => ["moe", "larry", "curly"]
 ```
 
-###_.where(list, properties)
+### _.where(list, properties)
 
 在list中看每一项，如果这个项包含properties中所有的键值对的话，那么就把这个项过滤出来放到一个数组里，最后返回的数组里包含所有符合这种要求的项
 
@@ -517,7 +517,7 @@ _.where = function(obj, attrs){
 }
 ```
 
-###_.findWhere(list, properties)
+### _.findWhere(list, properties)
 
 在list里面找，返回第一个匹配properties中所有键值对的值。
 
@@ -529,7 +529,7 @@ _.findWhere = function(obj, attrs){
 }
 ```
 
-###_.max(list, [iteratee], [context])
+### _.max(list, [iteratee], [context])
 
 返回list中最大的值，如果提供了iteratee的话，那么iteratee作用在list的每一项上锁返回的值作为比较大小的标准。如果list为空的话，返回`-Infinity`。非数值类型的list会被忽略。
 
@@ -577,7 +577,7 @@ _.max = function(obj, iteratee, context){
 false || 0 && 1; //0 相当于 false || (0 && 1)
 ```
 
-###_.min(list, [iteratee], [context])
+### _.min(list, [iteratee], [context])
 
 用法和源码的写法与`_.max`方法正好相反。
 
@@ -606,7 +606,7 @@ _.min = function(obj, iteratee, context){
 }
 ```
 
-###_.shuffle(list)
+### _.shuffle(list)
 
 “shuffle”在英文中就是洗牌的意思，也就是说这个方法就是要把list中各项的顺序打乱
 
@@ -654,7 +654,7 @@ shuffled: 3, 2, 1
 
 可见在第三次循环中，index与rand的数值不相同，于是shuffled[2]的位置就被赋值为shuffled[0]，也就是数组的最后一个数值1；接着，原来shuffled[0]就被赋值为最初的set[2]的值，即3。
 
-###_.sample(list, [n])
+### _.sample(list, [n])
 
 返回n个随机的list中的项。如果n没有传，就默认返回随机的其中一项。
 
@@ -677,7 +677,7 @@ _.map([[1, 2, 3], [4, 5, 6], [7, 8, 9]], _.sample); //[2, 6, 8]
 
 如果源码中没有guard的话，`_.map([[1, 2, 3], [4, 5, 6], [7, 8, 9]], _.sample); `返回的就是`[[], [6], [7, 9]]`这样的结果，因为此处传入`_.sample`的index被误认为要返回的值的数量，从而得到这种有点匪夷所思的结果。
 
-###_.sortBy(list, iteratee, [context])
+### _.sortBy(list, iteratee, [context])
 
 返回list的一个拷贝，其中各项是按照iteratee运行在各项上得到的结果的升序排列的。iteratee也可以是属性名。
 
@@ -713,7 +713,7 @@ _.sortBy = function(obj, iteratee, context){
 }
 ```
 
-###_.groupBy(list, iteratee, [context])
+### _.groupBy(list, iteratee, [context])
 
 将list分成几组，以各项运行iteratee之后的结果作为分组依据。如果iteratee是个字符串，而不是函数的话，那么就以各项以这个iteratee为属性的值为依据进行分组。
 
@@ -745,7 +745,7 @@ _.groupBy = group(function(result, value, key){
 })
 ```
 
-###_.indexBy(list, iteratee, [context])
+### _.indexBy(list, iteratee, [context])
 
 给定一个list，还有一个iteratee，这个iteratee运行在list的每一项上时，返回一个key或属性名，然后返回一个对象，对象中每一项都是以这个key为键名的。它跟groupBy很像，但是当你知道返回的key都是唯一的时候，就可以用它。
 
@@ -769,7 +769,7 @@ _.indexBy = group(function(result, value, key){
 });
 ```
 
-###_.countBy(list, iteratee, [context])
+### _.countBy(list, iteratee, [context])
 
 跟groupBy有点类似，但是返回的是每个组里面的元素的数量
 
@@ -788,7 +788,7 @@ _.countBy = group(function(result, value, key){
 })
 ```
 
-###_.toArray(list)
+### _.toArray(list)
 
 根据list创建一个真正的数组
 
@@ -801,7 +801,7 @@ _.toArray = function(obj){
 }
 ```
 
-###_.size(list)
+### _.size(list)
 
 返回list中有多少个值
 
@@ -818,7 +818,7 @@ _.size = function(obj){
 }
 ```
 
-###_.partition(array, predicate)
+### _.partition(array, predicate)
 
 将一个数组分成两个数组，其中一个是通过了predicate的元素组成的，另外一个是未通过predicate的元素组成的
 
@@ -840,9 +840,9 @@ _.partition = function(obj, predicate, context){
 }
 ```
 
-##用于数组的一些方法
+## 用于数组的一些方法
 
-###_.first(array, [n])
+### _.first(array, [n])
 
 返回数组中前n个元素，没有n就默认返回1个
 
@@ -858,7 +858,7 @@ _.first = _.head = _.take = function(array, n, guard){
 
 源码中调用了`_.initial`方法。
 
-###_.initial(array, [n])
+### _.initial(array, [n])
 
 返回的数组中将最后n的元素去掉了，如果n没有传入的话，那么就是把最后一个去掉。
 
@@ -868,7 +868,7 @@ _.initial = function(array, n, guard){
 }
 ```
 
-###_.last(array, [n])
+### _.last(array, [n])
 
 返回数组的最后第n个元素，n没有的话，默认返回最后一个
 
@@ -882,7 +882,7 @@ _.last = function(array, n, guard){
 
 源码中调用了`_.rest`方法。
 
-###_.rest(array, [index])
+### _.rest(array, [index])
 
 返回从index元素开始一直到最后的所有元素，如果没有传入index，那么就是从第2个（index为1）开始返回后面所有的元素
 
@@ -892,7 +892,7 @@ _.rest = _.tail = _.drop = function(array, n, guard){
 }
 ```
 
-###_.compact(array)
+### _.compact(array)
 
 返回array的一个副本，并且将其中所有的falsy value都去掉。在JS中，`false`、`null`、`0`、`""`、`undefined`和`NaN`都是falsy value。
 
@@ -939,7 +939,7 @@ _.flatten = function(array, shallow){
 
 可以看到，内部的`flatten`方法用到了递归。将数组中的每一个value都flatten，当value不再是数组或类数组后，就会走到`else if(!strict)`这个分支中来，将一个个值添加到最终的结果数组中。如果没有那个`else if(!strict)`这个分支的话，当深度flatten的时候，最早最下面一层，必然会返回非数组的value，如果没有这个分支，这些非数组的value就加不到结果数组中。也就是说，如果没有这个分支，那么当`shallow`为false的时候，就一定会返回空数组。
 
-###_.without(array, *values)
+### _.without(array, *values)
 
 返回这个数组的拷贝，并且将里面为*values的值都去掉
 
@@ -957,7 +957,7 @@ _.without = function(array){
 
 源码中调用了`_.difference`方法。
 
-###_.difference(array, *others)
+### _.difference(array, *others)
 
 与without类似，但是返回的是数组中不再*others数组中的值所构成的数组
 
@@ -977,7 +977,7 @@ _.difference = function(array){
 }
 ```
 
-###_.uniq(array, [isSorted], [iteratee])
+### _.uniq(array, [isSorted], [iteratee])
 
 该方法会产生一个没有重复项的数组。如果事先知道传入的第一个参数数组是已经排序的，那么可以在isSorted的参数位置传入`true`，这样会使用一种更为快速的算法。如果是否是唯一的标准是iteratee运行在数组之中每一项的结果决定的，那么就传入iteratee参数。
 
@@ -1030,7 +1030,7 @@ _.uniq([1, 2, 3, 4, 5], false, function(n){return n%2; });
 
 所以isSorted这个参数一定要慎用。而且这里究竟是看谁是sorted的？如果是看传入的第一个参数数组是否是sorted，这个经上例来看并不靠谱。这个isSorted当iteratee存在的时候，应该是看iteratee在每一项上走一遍，得到的结果所产生的的数组是否是sorted才对。
 
-###_.union(*arrays)
+### _.union(*arrays)
 
 传入多个数组，然后返回一个数组，这个数组里面包含所有数组里面的元素，而且是去重了的。顺序就是按照原本在各数组中出现的顺序。
 
@@ -1048,7 +1048,7 @@ _.union = function(){
 }
 ```
 
-###_.intersection = function(*array)
+### _.intersection = function(*array)
 
 传入多个数组，返回一个数组，其中的元素在那多个数组中都出现过。
 
@@ -1074,7 +1074,7 @@ _.intersection = function(array){
 }
 ```
 
-###_.zip(*arrays)
+### _.zip(*arrays)
 
 该方法将数组中每一项的值，按照对应位置拼在一起。如果你要操作的是一个嵌套的矩阵的话，那么这个方法可以用于转置矩阵。
 
@@ -1093,7 +1093,7 @@ _.zip = function(){
 
 可见：`_.zip`源码中引用了`_.unzip`
 
-###_.unzip(array)
+### _.unzip(array)
 
 与`_.zip`的用法正好相反。为`_.unzip`传入一个数组的数组，返回的是一系列新数组。第一个数组中包含的是原来所有数组中的第一个元素；第二个数组包含原来所有数组中的第二个元素；以此类推。
 
@@ -1116,7 +1116,7 @@ _.unzip = function(array){
 }
 ```
 
-###_.object(list, [value])
+### _.object(list, [value])
 
 将数组转为对象。如果有重复的键名存在的话，取最后出现的键值。
 
@@ -1139,7 +1139,7 @@ _.object = function(list, values){
 }
 ```
 
-###_.findIndex(array, predicate, [context])
+### _.findIndex(array, predicate, [context])
 
 从左向右，找到第一个通过predicate的元素的index
 
@@ -1164,7 +1164,7 @@ function createPredicateIndex(dir){ //dir代表方向，1为从左向右，-1为
 _.findIndex = createPredicateIndexFinder(-1);
 ```
 
-###_.findLastIndex(array, predicate, [context])
+### _.findLastIndex(array, predicate, [context])
 
 从右向左，找到第一个通过predicate的元素的index
 
@@ -1172,7 +1172,7 @@ _.findIndex = createPredicateIndexFinder(-1);
 _.findLastIndex = createPredicateIndexFiner(-1);
 ```
 
-###_.sortedIndex(list, value, [iteratee], [context])
+### _.sortedIndex(list, value, [iteratee], [context])
 
 利用binary search来确定，这个value应该查到list的什么位置，并保持list的排序状态。如果iteratee提供了的话，那么排序依据就是list中各元素和value经过iteratee运行后的值。iteratee也可以是字符串类型，这时候它代表的就是list各项以及value的一个属性名。
 
@@ -1203,7 +1203,7 @@ _.sortedIndex([5, 4, 3, 2, 1], 2.5); // 0 不是我们想要的结果
 _.sortedIndex([1, 2, 3, 4, 5], 2.5); // 2
 ```
 
-###_.indexOf(array, value, [isSorted])
+### _.indexOf(array, value, [isSorted])
 
 返回value在array中的index，如果没有找到就返回-1。如果这个数组很大，而且你知道它是排序好了的，那么就可以在isSorted这里传入true，这样会使用binary search方法。参数第三个位置可以传入一个数字，代表从这个数字之后开始寻找匹配value的index
 
@@ -1239,13 +1239,13 @@ function createIndexFiner(dir, predicateFind, sortedIndex){
 _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
 ```
 
-###_.lastIndexOf
+### _.lastIndexOf
 
 ```javascript
 createIndexFiner(-1, _.findLastIndex);
 ```
 
-###_.range([start], stop, [step])
+### _.range([start], stop, [step])
 
 start如果没有传入的话，默认为0；step默认为1。该方法会返回一个由整数组成的数组，从start（含）开始，到stop（不含）结束。整数间距为step。注意，如果stop比start还要小的话，那么就会返回空数组。因此，如果你想得到一个负数组成的数组，请将step设为负值。
 
@@ -1274,9 +1274,9 @@ _.range = function(start, stop, step){
 }
 ```
 
-##用于函数的一些方法
+## 用于函数的一些方法
 
-###_.bind(function, obj, *argument)
+### _.bind(function, obj, *argument)
 
 ```javascript
 var func = function(greeting){

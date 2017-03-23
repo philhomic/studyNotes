@@ -1325,41 +1325,73 @@ var sourceFunc = function(age, sex){
 	console.log('argument: ' + age);
 	console.log('argument: ' + sex);
 }
-var boundFunc = sourceFunc.bind({name: 'moe'}, 12);
+var boundFunc = function(sex){
+    return sourceFunc.apply({name: 'moe'}, [12, sex]);
+}
 boundFunc('male');
 //name in context: moe
 //argument: 12
 //argument: male
-//其中 context指的就是要绑定的this，在这个例子中，这个context是{name: 'moe'}
-//callingContext就是被绑定的函数执行时候的this，在这个例子中，boundFunc执行时的this是全局变量
-//再看下面的判断
-if(!(callingContext instanceof boundFunc)){
-	return sourceFunc.apply(context, args);
-}
-//上面举得例子 callingContext并不是boundFunc的实例，因此executeBound返回的就是简单的sourceFunc绑定context上下文以及其他参数，这没什么好说的
+
+/*
+上面例子中的boundFunc的callingContext是全局变量，所以callingFunc不是boundFunc的instance，因此走的是if判断里面的return sourceFunc.apply(context, args);
+在_.bind的源码中，调用executeBound的时候，最后一个参数是args.concat(slice.call(arguments))，其实就是将所有的参数拼在一起，对应到上面的例子，就是[12, sex]这里，对参数进行了拼接。再说得更细致一些，走到_.bind源码汇总的var args = slice.call(arguments, 2); 这一句的时候，这个arguments是_.bind的arguments，也就是：sourceFunc, {name: 'moe'}, 12。然后将前两个减掉，这时候的args = 12。接下来走到return executeBound(func, bound, context, this, args.concat(slice.call(arguments)))这一句。这里的arguments与上面的arguments不一样。这里的arguments是bound/boundFunc所接收的参数，即'male'。所以，在executeBound里面，用了concat拼接起来了。
+当boundFunc是作为普通函数运行，而不是构造函数的时候，执行的其实就是上面这样一个过程
+*/
 ```
 
+当boundFunc是作为构造函数运行时，就不会走if(!(callingContext instanceof boundFunc))里面，走的是下面的这一部分代码：
+
 ```javascript
-//再看一个例子
-var sourceFunc = function(age, sex){
-	console.log('name in context: ' + this.name);
-	console.log('argument: ' + age);
-	console.log('argument: ' + sex);
-}
-var boundFunc = sourceFunc.bind({name: 'moe'}, 12);
-var boundFuncInstance = new boundFunc('male');
-//name in context: undefined
-//argument: 12
-//argument: male
-//我们看到，当使用new来调用boundFunc的时候，会生成boundFunc的实例，new出来的这个实例就是this。由于这个this中没有定义name属性，所以打印出来的name in context是undefined。这说明，当boundFunc是用new来调用的话，原来的那种bind方式就行不通了，context（此例中就是{name: 'moe'}）根本就没有绑定到boundFunc上去。因此，executeBound提供了另外一种方法。即：
 var self = baseCreate(sourceFunc.prototype);
 var result = sourceFunc.apply(self, args);
 if(_.isObject(result)) return result;
 return self;
-//baseCreate(sourceFunc.prototype)就是基于sourceFunc的原型来创造一个对象出来。此例中sourceFunc的prototype就是Object，因此self就是Object.create(Object.prototype)，创造出来的就是一个空对象。
 ```
 
-上面executeBound没看懂，明天继续看！！！上面代码块里面有些问题！
+当boundFunc作为构造函数的时候，是要返回一个对象的。这时候仅仅`return sourceFunc.apply(context, args);`是不够的。还要判断sourceFunc.apply之后会返回什么。
+
+构造函数，如果这个函数本身没有返回值，或者返回值为null或非对象的话，返回的就是实例。如果这个函数本身也返回了一个对象，那么就返回该对象。所以，我们在executeBound的源码中看到了这样的判断：
+
+```javascript
+if(_.isObject(result)) return result; //如果原本返回的就是对象，那么就返回该对象
+return self; //否则就返回实例。self是sourceFunc的实例，继承了它的原型链
+```
+
+我们注意到，当boundFunc是`new boundFunc()`这样用的时候，它的`this`就是这个构造函数的实例。因此，这个时候`_.bind`传入的`context`已经没有用处了，传入的只有后面的参数。在`executeBound`源码汇中的if之外，就没有再用到context这个参数。
+
+```javascript
+var sourceFunc = function(age, sex){
+    console.log('name in context: ' + this.name);
+    console.log('argument: ' + age);
+    console.log('argument: ' + sex);
+}
+var boundFunc = sourceFunc.bind({name: 'moe'}, 12);
+var result = new boundFunc('male');
+//name in context: undefined
+//argument: 12
+//argument: male
+result;
+//sourceFunc {} 这个是sourceFunc的实例，因为sourceFunc本身没有返回对象，所以返回了实例
+```
+
+```javascript
+var sourceFunc = function(age, sex){
+    console.log('name in context: ' + this.name);
+    console.log('argument: ' + age);
+    console.log('argument: ' + sex);
+    return {name: 'moe', age: age, sex, sex};
+}
+var boundFunc = sourceFunc.bind({name: 'peter'}, 12);
+var result = new boundFunc('male');
+//name in context: undefined
+//argument: 12
+//argument: male
+result;
+Object {name: "moe", age: 12, sex: "male"} //返回的是对象，并非实例，参数传了进去
+```
+
+
 
 
 

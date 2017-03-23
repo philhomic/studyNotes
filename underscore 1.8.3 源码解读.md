@@ -1380,7 +1380,7 @@ var sourceFunc = function(age, sex){
     console.log('name in context: ' + this.name);
     console.log('argument: ' + age);
     console.log('argument: ' + sex);
-    return {name: 'moe', age: age, sex, sex};
+    return {name: this.name, age: age, sex: sex};
 }
 var boundFunc = sourceFunc.bind({name: 'peter'}, 12);
 var result = new boundFunc('male');
@@ -1388,10 +1388,48 @@ var result = new boundFunc('male');
 //argument: 12
 //argument: male
 result;
-Object {name: "moe", age: 12, sex: "male"} //返回的是对象，并非实例，参数传了进去
+Object {name: undefined, age: 12, sex: "male"} //返回的是对象，并非实例，参数传了进去，但是传进去的context {name: 'peter'}并没有榜上，因为返回的result中的name是undefined
 ```
 
-上面的两个例子有问题，需要用_.bind才对，再改吧！
+以上是通过原生的bind进行的绑定，可以看到，_.bind的polyfill的效果确实与其一致。
+
+借此复习一下`new Constructor`究竟经历了怎样一个过程：
+
+[这篇文章](http://www.cnblogs.com/zichi/p/4392944.html)是很有参考价值的一篇文章.此处参考《学习JavaScript设计模式与开发实践》一书P19-20上对于`new`的模拟。
+
+```javascript
+//定义了一个objectFactory的函数，来模拟new
+var objectFactory = function(){
+	var obj = new Object(), //从Object.prototype上克隆一个空的对象
+		Constructor = [].shift.call(arguments); //取得外部传入的构造器，此例是下面的Person
+		obj.__proto__ = Constructor.prototype; //指向正确的原型
+		var ret = Constructor.apply(obj, arguments); //借用外部传入的构造器给obj设置属性
+
+		return typeof ret ==='object' ? ret : obj; //确保构造器总是会返回一个对象
+}
+
+function Person(name){
+	this.name = name;
+}
+Person.prototype.getName = function(){
+	return this.name;
+}
+
+var a = objectFactory(Person, 'sven');
+console.log(a.name); //输入：sven
+console.log(a.getName()); //输出：sven
+console.log(Object.getPrototypeof(a) === Person.prototype); //输出：true
+
+/*
+可见：
+var a = objectFactory(A, 'sven');
+var a = new A('sven');
+产生了同样的效果。
+*/
+```
+
+比对上述对于`new`的模拟和executeBound的源码，就看得更加清楚了。
+
 
 
 

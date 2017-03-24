@@ -215,6 +215,17 @@ var baseCreate = function(prototype){
 
 baseCreate函数就是生成一个以参数为原型的对象。
 
+原理与简化版的`Object.create`的polyfill一样：
+
+```javascript
+//简化版Object.create
+Object.create = Object.create || function(o){
+    fundtion F(){}; //一个空函数作为构造器
+    F.prototype = o; //将该构造器的原型设为传入的原型o
+    return new F();
+}
+```
+
 ```javascript
 var isArrayLike = function(collection){
 	var length = getLength(collection);
@@ -1316,7 +1327,24 @@ _.bind = function(func, context){
 }
 ```
 
-以上代码中要着重理解executeBound函数。
+我们先来看一个简化版的bind的实现，参考《Javascript设计模式与开发实践》一书P32：
+
+```javascript
+Function.prototype.bind = Function.prototype.bind || function(){
+    var self = this, //保存原函数
+        context = [].shift.call(arguments), //需要绑定的this上下文
+        args = [].shift.call(arguments); //剩余的参数转成数组
+    return function(){ //返回一个新的函数
+        return self.apply(context, [].concat.call(args, [].slice.call(arguments))); 
+        //执行新的函数的时候，会把之前传入的context当作新函数体内的this
+        //并且组合两次分别传入的参数，作为新函数的参数
+    }
+}
+```
+
+以上代码是不是看上去跟_.bind的代码很类似，_.bind的代码中也进行了`var args = slice.call(arguments, 2)`，并且后面也出现了`args.concat(slice.call(arguments))`。两者这一部分的原理是一样的。
+
+举个例子：
 
 ```javascript
 //举个例子：
@@ -1429,6 +1457,146 @@ var a = new A('sven');
 ```
 
 比对上述对于`new`的模拟和executeBound的源码，就看得更加清楚了。
+
+### _.bindAll(obj, *methodNames)
+
+该方法会将object下面名为methodNames的一些方法，其context绑在object上。十分适合用来绑定event handler。
+
+```javascript
+var buttonView = {
+    label: 'underscore',
+    onClick = function(){ alert('clicked: ' + this.label); },
+    onHover = function(){ console.log('hovering: ' + this.label); }
+};
+_.bindAll(buttonView, 'onClick', 'onHover');
+//当button被点击时，this.label会获得正确的值
+//jQuery('#underscore_button').on('click', buttonView.onClick)
+```
+
+```javascript
+_.bindAll = function(obj){
+    var i, length = arguments.length, key;
+    if(length <= 1) throw new Error('bindAll must be passed function names');
+    for(i = 1; i < length; i++){
+        key = arguments[i];
+        obj[key] = _.bind(obj[key], obj);
+    }
+    return obj;
+}
+```
+
+### _.partial(function, *arguments)
+
+返回的也是函数，与_.bind非常接近，只不过不改变this值。你可以传递`_`作为参数，这代表这个参数不预先填充，在调用的时候再提供参数。
+
+```javascript
+var subtract = function(a, b){ return b - a };
+sub5 = _.partial(subtract, 5);
+sub5(20); //15
+
+//使用 _ 占位符
+subFrom20 = _.partial(subtract, _, 20);
+subFrom20(5); //15
+```
+
+```javascript
+_.partial = function(func){
+    var boundArgs = slice.call(arguments, 1); //boundArgs是传入到_.partial中需要提前绑定的参数，其中真正的参数和占位符_都在里面
+    var bound = function(){
+        var position = 0, length = boundArgs.length;
+        var args = Array(length);
+        for(var i = 0; i < length; i++){
+            args[i] == boundArgs[i] === _ ? arguments[position++] : boundArgs[i]; //将参数一个个查看过来，如果是占位符，就用新传入的参数代替；如果不是占位符，就保持原来的值不变
+        }
+        while(position < arguments.length) args.push(arguments[position++]); //position < arguments.length 说明还有新传入的参数，所以需要继续往里面添加
+        return executeBound(func, bound, this, this, args);
+    };
+    return bound;
+}
+```
+
+### _.memoize(function, [hashFunction])
+
+该方法可以缓存计算的结果，对于加速耗时较长的计算很有帮助。如果传递了hashFunction之后，这个hasFunction会被用于计算存储结果的hash key。hash Function默认使用function的第一个参数作为key。被memoize的值的缓存可以通过返回的函数的cache属性得到。
+
+```javascript
+var fibonacci = _.memoize(function(n){
+    return n < 2 ? n : fibonacci(n-1) + fibonacci(n - 2);
+})
+```
+
+```javascript
+_.memoize = function(func, hasher){
+    var memoize = function(key){
+        var cache = memoize.cache;
+        var address = '' + (hasher ? hasher.apply(this, arguments) : key);
+        if(!_.has(cache, address)) cache[address] = func.apply(this, arguments);
+        return cache[address];
+    };
+    memoize.cache = {};
+    return memoize;
+}
+```
+
+```javascript
+var add = function(a, b){ return a + b; };
+add = _.memoize(add); 
+add(1, 3); //4
+add(1, 5); //4 因为是以第1个参数作为key的，所以如果之前key为1的值存为了4，后面add(1, 5)就不会再进行运算，而是直接会将add.cache中值为1的值4取出来。
+add.cache; //{1: 4}
+```
+
+```javascript
+//要解决上面代码块中出现的问题，就需要用到hashFunction，简单解决一下如下：
+var add = function(a, b){ return a + b; };
+add = _.memoize(add, function(){ return Math.random(); }); 
+add(1, 3); //4
+add(1, 5); //6
+add.cache; //{0.1903425562450185: 4, 0.07820913718093436: 6}
+```
+
+_.memoize的作用，说白了就是，传进去一个函数，返回来一个函数，返回来的这个函数就是memoized函数。这个memoized函数再进行运算的时候，在运算之前会先到它自己的cache里面查，这个运算以前做过吧，做过cache里面就会有值，就把它取出来直接用就好了，如果cache里没有，那么就还是乖乖运算好了。这一方法用于计算阶乘等递归的函数，效果应该挺显著的。
+
+### _.delay(function, wait, *arguments)
+
+类似setTimeout，等待wait毫秒后调用function。如果传递可选的参数arguments，当函数function执行时，arguments会作为参数传入。
+
+```javascript
+var log = _.bind(console.log, console);
+_.delay(log, 1000, 'logged later');
+//'logged later' //1秒钟后显示
+```
+
+```javascript
+_.delay = function(func, wait){
+    var args = slice.call(arguments, 2);
+    return setTimeout(function(){
+        return func.apply(null, args);
+    })
+}
+```
+
+### _.defer(function, *arguments)
+
+延迟调用function直到当前调用栈清空为止，类似使用延时为0的setTimeout方法。对于执行开销大的计算和无阻塞UI线程的HTML渲染时候非常有用。如果传递arguments参数，当函数function执行时，arguments会作为参数传入。
+
+至于为什么会用到`setTimeout(f, 0)`，阮一峰的博客写得很好了，直接参考即可。[这一篇](http://javascript.ruanyifeng.com/advanced/timer.html)还有[这一篇](http://www.ruanyifeng.com/blog/2014/10/event-loop.html)
+
+```javascript
+_.defer(function(){alert('deferred')});
+//先在console中显示1，然后弹出alert窗
+//alert窗是阻塞性的，如果alert弹窗出现了，那么必须点击“确定”才能继续向下运行
+//此处返回的1其实是setTimeout函数返回的表示timer的唯一数值
+```
+
+！！！！！上面写的有点问题，要再改！
+
+源码：
+
+```javascript
+_.defer = _.partial(_.delay, _, 1); //相当于设置setTimeout(f, 1);
+```
+
 
 
 

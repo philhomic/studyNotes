@@ -1572,7 +1572,7 @@ _.delay = function(func, wait){
     var args = slice.call(arguments, 2);
     return setTimeout(function(){
         return func.apply(null, args);
-    })
+    }, wait);
 }
 ```
 
@@ -1582,20 +1582,99 @@ _.delay = function(func, wait){
 
 至于为什么会用到`setTimeout(f, 0)`，阮一峰的博客写得很好了，直接参考即可。[这一篇](http://javascript.ruanyifeng.com/advanced/timer.html)还有[这一篇](http://www.ruanyifeng.com/blog/2014/10/event-loop.html)
 
-```javascript
-_.defer(function(){alert('deferred')});
-//先在console中显示1，然后弹出alert窗
-//alert窗是阻塞性的，如果alert弹窗出现了，那么必须点击“确定”才能继续向下运行
-//此处返回的1其实是setTimeout函数返回的表示timer的唯一数值
-```
-
-！！！！！上面写的有点问题，要再改！
-
 源码：
 
 ```javascript
 _.defer = _.partial(_.delay, _, 1); //相当于设置setTimeout(f, 1);
 ```
+
+从上面代码可以看出：`_.defer(f)`相当于执行了`_.delay(f, 1)`，就相当于执行了`setTimeout(function(){ return f.apply(null); }, 1)`(没考虑传递更多参数的情况)。
+
+```javascript
+var f1 = function(){ console.log('f1'); };
+var f2 = function(){ alert('f2'); };
+
+f2();
+f1();
+//alert是阻塞式的，用户不点击确定，程序是不会继续向下执行的。所以执行上面两行代码，必须先点击弹出的f2的确认，然后在控制台才会打印出'f1'来。
+```
+
+```javascript
+同样是上面的f1和f2
+_.defer(f2);
+f1();
+//这个时候，f1会先打印出来，然后f2的弹窗才会出现要求确认。这说明f1作为现有任务立即执行了，而f2添加到下一轮的“任务队列”中，要到下一次Event Loop才执行。
+```
+
+### _.throttle(function, wait, [options])
+
+创建并返回被传入的function的节流版本。当重复调用的时候，至少每个wait毫秒调用一次该函数。对于控制一些触发频率比较高的事件很有帮助，例如鼠标移动、mousemove事件、DOM元素动态定位、window对象的resize和scroll事件。
+
+参考[这篇文章](http://www.css88.com/archives/4648)，使用setTimeout和clearTimeout可以实现简单的throttle来优化window resize或scroll事件：
+
+```javascript
+var resizeTimer = null;
+$(window).on('resize', function(){
+	if(resizeTimer){
+		clearTimeout(resizeTimer);
+	}
+	resizeTimer = setTimeout(function(){
+		console.log("window resize");
+	}, 400);
+})
+//以上代码其实确保了resize上绑定的事件，至少要间隔400毫秒才会被执行一次。
+```
+
+又比如window scroll事件，使用underscore的_.throttle方法就是这样的：
+
+```javascript
+//先将document的高度设置高一些，这样可以进行滚动
+var f = function(){ console.log('1') };
+var v = _.throttle(function(){ console.log('2'); }, 5000);
+window.addEventListener('scroll', f);
+window.addEventListener('scroll', v);
+//滚动页面，查看控制台打印数字的频率，其中'1'的打印是没有收到控制的，而'2'的打印是至少隔5秒才会出现一次
+```
+
+默认情况下，throttle会在你第一次调用这个function的时候，尽可能快地执行这个函数。而且，如果在wait期间内，你又再次调用了，不管再次调用几次，到这个wait时间区间过去之后，它又会再尽可能快地执行这个函数。`_.throttle`方法还接收options配置。如果想要禁用第一次首先执行的话，将option设置为`{leading: false}`；如果想禁用最后一次执行的话，传递`{trailing: false}`。
+
+源码：
+
+```javascript
+_.throttle = function(func, wait, options){
+	var context, args, result;
+	var timeout = null;
+	var previous = 0;
+	if(!options) options = {};
+	var later = function(){
+		previous = options.leading === false ? 0 : _.now();
+		timeout = null;
+		result = func.apply(context, args);
+		if(!timeout) context = args = null;
+	};
+	return function(){
+		var now = _.now();
+		if(!previous && options.leading === false) previous = now;
+		var remaining = wait - (now - previous);
+		context = this;
+		args = arguments;
+		if(remaining <= 0 || remaining > wait){
+			if(timeout){
+				clearTimeout(timeout);
+				timeout = null;
+			}
+			previous = now;
+			result = func.apply(context, args);
+			if(!timeout) context = args = null;
+		} else if(!timeout && options.trailing != false){
+			timeout = setTimeout(later, remaining);
+		}
+		return result;
+	}
+}
+```
+
+源码解析参考[这篇文章](https://github.com/hanzichi/underscore-analysis/issues/22)
 
 
 

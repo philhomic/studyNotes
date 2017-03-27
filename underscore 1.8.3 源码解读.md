@@ -1625,6 +1625,8 @@ $(window).on('resize', function(){
 //以上代码其实确保了resize上绑定的事件，至少要间隔400毫秒才会被执行一次。
 ```
 
+节流原理，利用定时器。当触发一个事件时，先setTimeout让这个事件延迟执行。如果还没到时间又触发了事件，那么就将原来的定时器clear掉，再设置一个新的定时器。
+
 又比如window scroll事件，使用underscore的_.throttle方法就是这样的：
 
 ```javascript
@@ -1674,7 +1676,13 @@ _.throttle = function(func, wait, options){
 }
 ```
 
-源码解析参考[这篇文章](https://github.com/hanzichi/underscore-analysis/issues/22)
+源码解析参考[这篇文章](https://github.com/hanzichi/underscore-analysis/issues/22)和[这篇文章](http://www.alloyteam.com/2012/11/javascript-throttle/)。两者这一部分的原理是一样的。
+
+在源码中同时看到设置定时器和设置时间戳的方式。一种方式是通过时间戳看是否执行回调。先记下上次执行的时间，然后当函数要再次执行的时候，看看上次的时间和当前时间是否间隔达到要求，达到了就执行，没达到就不执行。这个就是if(remaining <= 0)所判断的。另外一种方式是通过定时器。设置了定时器之后，不到点儿的话，如果已有定时器就不能再设定时器。到了点之后，把定时器的Timer清理掉。这就是else if(!timeout)所判断的，定时器到点执行的later函数中，包括将之前定时器的timer设置为null。
+
+throttle还没写完！
+
+
 
 
 

@@ -1651,6 +1651,7 @@ _.throttle = function(func, wait, options){
 	var later = function(){
 		previous = options.leading === false ? 0 : _.now();
 		timeout = null;
+		//console.log('B');
 		result = func.apply(context, args);
 		if(!timeout) context = args = null;
 	};
@@ -1661,11 +1662,14 @@ _.throttle = function(func, wait, options){
 		context = this;
 		args = arguments;
 		if(remaining <= 0 || remaining > wait){
+			//由于options.leading === false的时候，previous = now，所以remaining = wait，走不到这个分支里面来，所以只要走到这里面来的，都是没有禁用leading的情况。
+			//没有禁用leading的话，就是要尽快执行func，所以如果之前设置了延迟执行的话，都先曲线，然后直接尽快执行func。
 			if(timeout){
 				clearTimeout(timeout);
 				timeout = null;
 			}
 			previous = now;
+			console.log('A');
 			result = func.apply(context, args);
 			if(!timeout) context = args = null;
 		} else if(!timeout && options.trailing != false){
@@ -1678,9 +1682,50 @@ _.throttle = function(func, wait, options){
 
 源码解析参考[这篇文章](https://github.com/hanzichi/underscore-analysis/issues/22)和[这篇文章](http://www.alloyteam.com/2012/11/javascript-throttle/)。两者这一部分的原理是一样的。
 
+根据[这篇文章](https://github.com/hanzichi/underscore-analysis/blob/master/underscore-1.8.3.js/underscore-1.8.3-analysis.js)的注释，如果将上面源码中的`console.log`打开，会出现下面的情况：
+
+```javascript
+sample 1: _.throttle(function(){}, 1000)
+print: A, B, B, B ...
+
+step1: 当第一次触发，没有禁用leading和trailing的时候，previous为0 -> remaining<0 -> previous设置时间戳，（打印A）运行func
+step2: 当再次触发，时间还没到的时候，走else if分支，设置定时器 
+-> 定时器到时，previous设置时间戳，（打印B）执行func，将定时器清空
+-> 定时器没到时，说明remaining也没有<=0，所以第一个分支进不去，第二个分支中有!timeout的判断，所以也进不去，所以这个时候throttled函数什么也执行不了。
+step3: 再次触发，由于previous不为0，所以remaining = wait - (now - previous)。如果remaining <= 0 这说明wait这段时间距离上次func的触发已经过去了，于是又会走remaining <= 0的分支执行；如果remaining在0和wait之间，这说明距离上次func触发还没到wait时间，这时候就会走else if分支，设置延迟执行。
+依次循环
+
+///////////////////////
+
+sample 2: _.throttle(function(){}, 1000, {leading: false})
+print: B, B, B, B ...
+
+step1: 第一次触发，禁用leading的时候，previous被设置为了now，remaining = wait，于是进入不了第一个分支，今儿进入第二个分支，进行定时器设置，延时操作 -> 定时器到时，previous设置为0，（打印B）执行func，清空定时器
+step2: 再次触发，
+-> 时间还没到时，remaining的时间不符合第一个分支，进不去，同时由于还存在定时器，所以第二个分支也进不去，什么也干不了。
+-> 时间到了的时候，由于previous设置为0并且禁用了leading，所以previous又被设置为now，导致remaining = wait，第一个分支进不去，进入第二个分支设置定时器进行延迟执行，因此一直是打印B的。
+依次循环
+
+///////////////////////////////
+
+sample 3: _.throttle(function(){}, 1000, {trailing: false})
+print: A, A, A, A ...
+
+step1: 第一次触发，trailing被禁用的时候，previous为0，remaining<0，进入第一个分支，（打印A）func立即执行
+step2: 再次触发：
+-> 时间还没到的时候，remaining的条件不符合，进入不了第一个分支；由于trailling === false 不符合第二个分支的判断，所以第二个分支也进不去，什么也不能干
+-> 时间到了的话，进入第一个分支，（打印A）func立即执行
+```
+
 在源码中同时看到设置定时器和设置时间戳的方式。一种方式是通过时间戳看是否执行回调。先记下上次执行的时间，然后当函数要再次执行的时候，看看上次的时间和当前时间是否间隔达到要求，达到了就执行，没达到就不执行。这个就是if(remaining <= 0)所判断的。另外一种方式是通过定时器。设置了定时器之后，不到点儿的话，如果已有定时器就不能再设定时器。到了点之后，把定时器的Timer清理掉。这就是else if(!timeout)所判断的，定时器到点执行的later函数中，包括将之前定时器的timer设置为null。
 
-throttle还没写完！
+有了if(remaining <= 0)和else if(!timeout)两个判断，凡是在wait时间之内，提前要执行的throttled函数，其实是哪个分支也走不进去，什么也干不了。一旦时间到了，要么走第一个分支立即执行，要么定时器触发，执行func。
+
+至于leading和trailing的禁用，这里也很巧妙。其中trailing禁用比较简单，所谓禁用掉trailing就是指延迟要发生的那最后一次不让它执行，于是在源码中，就是直接最后这个延时器不让设置了。
+
+leading禁用就更巧妙了，所谓leading禁用，就是马上要触发的这次不让它执行，这就说明，leading禁用的时候，就用定时器来设置func延迟执行。通过在leading禁用的时候，将previous设置为now，假装刚刚执行过，这次就不用执行了，使得remaining = wait 从而进入不了第一个分支，而只能走入第二个分支。但是这里有一个地方，设置previous = now的判断条件是 leading === false && !previous。关键就关键在这个 !previous 上，第一次执行throttled函数，previous为0，leading设置为禁用，当然可以走通这个判断，previous顺利设置为now。但是当定时器执行later函数的时候，为什么在later函数里，当leading === false的时候，previous又被设置为0呢？这是因为，如果不设置为0的话，下一次执行throttled函数的时候，if(leading === false && !previous)就走不通，于是previous就无法正常设置为now了，这样会导致直接进入第一个分支，立即执行func函数，而我们想要的是leading禁用，所以这样就出现问题了。
+
+leading === false和trailing === false可以简单理解为“掐头”和“去尾”。
 
 
 

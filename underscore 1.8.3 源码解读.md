@@ -1717,15 +1717,68 @@ step2: 再次触发：
 -> 时间到了的话，进入第一个分支，（打印A）func立即执行
 ```
 
-在源码中同时看到设置定时器和设置时间戳的方式。一种方式是通过时间戳看是否执行回调。先记下上次执行的时间，然后当函数要再次执行的时候，看看上次的时间和当前时间是否间隔达到要求，达到了就执行，没达到就不执行。这个就是if(remaining <= 0)所判断的。另外一种方式是通过定时器。设置了定时器之后，不到点儿的话，如果已有定时器就不能再设定时器。到了点之后，把定时器的Timer清理掉。这就是else if(!timeout)所判断的，定时器到点执行的later函数中，包括将之前定时器的timer设置为null。
+在源码中同时看到设置定时器和设置时间戳的方式。一种方式是通过时间戳看是否执行回调。先记下上次执行的时间，然后当函数要再次执行的时候，看看上次的时间和当前时间是否间隔达到要求，达到了就执行，没达到就不执行。这个就是`if(remaining <= 0)`所判断的。另外一种方式是通过定时器。设置了定时器之后，不到点儿的话，如果已有定时器就不能再设定时器。到了点之后，把定时器的Timer清理掉。这就是`else if(!timeout)`所判断的，定时器到点执行的later函数中，包括将之前定时器的timer设置为null。
 
-有了if(remaining <= 0)和else if(!timeout)两个判断，凡是在wait时间之内，提前要执行的throttled函数，其实是哪个分支也走不进去，什么也干不了。一旦时间到了，要么走第一个分支立即执行，要么定时器触发，执行func。
+有了`if(remaining <= 0)`和`else if(!timeout)`两个判断，凡是在wait时间之内，提前要执行的throttled函数，其实是哪个分支也走不进去，什么也干不了。一旦时间到了，要么走第一个分支立即执行，要么定时器触发，执行func。
 
 至于leading和trailing的禁用，这里也很巧妙。其中trailing禁用比较简单，所谓禁用掉trailing就是指延迟要发生的那最后一次不让它执行，于是在源码中，就是直接最后这个延时器不让设置了。
 
-leading禁用就更巧妙了，所谓leading禁用，就是马上要触发的这次不让它执行，这就说明，leading禁用的时候，就用定时器来设置func延迟执行。通过在leading禁用的时候，将previous设置为now，假装刚刚执行过，这次就不用执行了，使得remaining = wait 从而进入不了第一个分支，而只能走入第二个分支。但是这里有一个地方，设置previous = now的判断条件是 leading === false && !previous。关键就关键在这个 !previous 上，第一次执行throttled函数，previous为0，leading设置为禁用，当然可以走通这个判断，previous顺利设置为now。但是当定时器执行later函数的时候，为什么在later函数里，当leading === false的时候，previous又被设置为0呢？这是因为，如果不设置为0的话，下一次执行throttled函数的时候，if(leading === false && !previous)就走不通，于是previous就无法正常设置为now了，这样会导致直接进入第一个分支，立即执行func函数，而我们想要的是leading禁用，所以这样就出现问题了。
+leading禁用就更巧妙了，所谓leading禁用，就是马上要触发的这次不让它执行，这就说明，leading禁用的时候，就用定时器来设置func延迟执行。通过在leading禁用的时候，将previous设置为now，假装刚刚执行过，这次就不用执行了，使得remaining = wait 从而进入不了第一个分支，而只能走入第二个分支。但是这里有一个地方，设置previous = now的判断条件是 `leading === false && !previous`。关键就关键在这个 !previous 上，第一次执行throttled函数，previous为0，leading设置为禁用，当然可以走通这个判断，previous顺利设置为now。但是当定时器执行later函数的时候，为什么在later函数里，当`leading === false`的时候，previous又被设置为0呢？这是因为，如果不设置为0的话，下一次执行throttled函数的时候，`if(leading === false && !previous)`就走不通，于是previous就无法正常设置为now了，这样会导致直接进入第一个分支，立即执行func函数，而我们想要的是leading禁用，所以这样就出现问题了。
 
-leading === false和trailing === false可以简单理解为“掐头”和“去尾”。
+`leading === false`和`trailing === false`可以简单理解为“掐头”和“去尾”。
+
+###_.debounce(function, wait, [immediate])
+
+创建一个新的debounced的函数，使得function的执行要等到它最后一次触发之后wait毫秒之后。使用场景例如，要等到input输入告一段落之后再执行某个而行为。例如：渲染Markdown评论的预览、在窗口resize之后重新计算layout等等。
+
+在wait毫秒过去之后，function执行时的arguments是按照最新的传入的参数来的。
+
+将参数immediate设置为true，会在wait的开头而不是结尾触发function，这个时候wait这个参数会被忽略掉。使用场景例如，要防止误双击submit按钮，致使出发了两次提交。
+
+```javascript
+//用途举例
+var lazyLayout = _.debounce(calculateLayout, 300);
+$(window).resize(lazyLayout);
+```
+
+_.debounce和_.throttle的区别就是，_.debounce返回的函数，如果一直触发，那么就一直不执行，直到不再触发了，才会执行；_.throttle返回的函数，如果一直触发，那么就至少要间隔wait毫秒才会触发一次。
+
+源码：
+
+```javascript
+_.debounce = function(func, wait, immediate){
+    var timeout, args, context, timestamp, result;
+    var later = function(){
+        var last = _.now - timestamp;
+        if(last < wait && last > 0){
+            timeout = setTimeout(later, wait - last);
+        } else {
+            timeout = null;
+            if(!immediate){
+                result = func.apply(context, args);
+                if(!timeout) context = args = null;
+            }
+        }
+    };
+
+    return function(){
+        cnotext = this;
+        args = arguments;
+        timestamp = _.now();
+        var callNow = immediate && !timeout;
+        if(!timeout) timeout = setTimeout(later, wait);
+        if(callNow){
+            result = func.apply(context, args);
+            context = args = null;
+        }
+        return result;
+    }
+}
+```
+
+当没有设置immediate的时候，debounced的函数执行，走了`if(!timeout) timeout = setTimeout(later, wait);`设置了定时器。如果还没到时间，debounced函数又要执行，这时候因为有`if(!timeout)`的限制，无法再设置定时器了。但是时间戳是更新了的（所以说，如果一直触发的话，时间戳会一直更新）。如果时间到了，那么later就开始执行了，首先将当前时间与上一次设置的时间戳进行比较。如果时间没到，就继续设置定时器，如果时间到了，就立即执行。注意later中进行了判断，如果immediate设置为true的话，是不会执行func的，因为immediate设置为true，是不应该通过定时器延迟执行的。
+
+接下来看设置immediate为true的时候，debounced的函数第一次执行，设置了时间戳，callNow为真，设置了定时器。然后进入`if(callNow)`的分支，直接执行了func。再次触发debounced函数，如果wait时间还没过去，这时候是有定时器的，所以无法再次设置定时器，同时因为!timeout为false，所以callNow也为false，所以func也不会直接执行。如果再次触发debounced函数，wait时间已经过去了，之前设置的定时器会执行later，由于`if(!immediate)`的判断，func不会直接执行，但是定时器却清掉了。所以这个时候callNow的判断又为真了，又可以直接执行func了。因此，这样就实现了，设置immediate为true的话，在wait开始的头上直接执行func，但是wait期间，还是不会执行func。除非wait毫秒过去，才能再度触发func。
 
 
 

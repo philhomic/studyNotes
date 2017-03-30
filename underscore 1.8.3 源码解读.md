@@ -1798,7 +1798,271 @@ var hello = function(name){ return "hello: " + name; };
 hello = _.wrap(hello, function(func){
 	return "before, " + func("moe") + ", after";
 });
+hello();
+//'before, hello: moe, after'
 ```
+
+### _.negate(predicate)
+
+返回与predicate函数相反的新版本
+
+```javascript
+var isFalsy = _.negate(Boolean);
+_.find([-2, -1, 0, 1, 2], isFalsy);
+//0
+```
+
+### _.compose(*functions)
+
+直白一些来说，compose的作用就是用f(), g(), h()这样几个函数，合成一个f(g(h()))出来.即前一个函数的参数是后一个函数的返回值。
+
+```javascript
+var greet = function(name){ return "hi: " + name; };
+var exclaim = function(statement){return statement.toUpperCase() + "!"; };
+var welcome = _.compose(greet, exclaim);
+welcome('moe');
+//'hi: MOE!'
+```
+
+```javascript
+_.compose = function(){
+	var args = arguments;
+	var start = args.length - 1;
+	return function(){
+		var i = start;
+		var result = arguments[start].apply(this, arguments);
+		while(i--) result = args[i].call(this, result);
+		return result;
+	}
+}
+```
+
+### _.after(count, function)
+
+创建一个function的新版本，使得这个function只能在count次call之后才执行。用途是将异步的一些相应集合在一起，确保所有异步的操作都结束，再继续向后执行。
+
+```javascript
+var renderNotes = _.after(notes.length, render);
+_.each(notes, function(note){
+	note.asyncSave({success: renderNotes});
+})
+//在所有的notes都保存之后，render再执行。也就是说，renderNotes被触发了notes.length次之后，render才执行。
+```
+
+```javascript
+_.after = function(times, func){
+	return function(){
+		if(--times < 1){
+			return func.apply(this.arguments);
+		}
+	}
+}
+```
+
+### _.before(count, function)
+
+创建function的一个新版本，使它被触发不能超过count次。当达到count次后，最后一次function执行的结果会被memoized并返回。
+
+```javascript
+var monthlyMeeting = _.before(3, askForRaise);
+monthlyMeeting();
+monthlyMeeting();
+monthlyMeeting();
+//如果后续再触发的话，结果也不会变了，跟第二次的结果是一样的。_.before的第一个参数，是小于它，不包含等于它
+```
+
+```javascript
+_.before = function(times, func){
+	var memo;
+	return function(){
+		if(--times > 0){
+			memo = func.applyIthis.arguments;
+		}
+		if(times <= 1) func = null;
+		return memo;
+	}
+}
+```
+
+### _.once(function)
+
+传入的函数只能被触发一次。再次触发没有效果。返回的值与首次执行返回的值相同。在初始化函数的时候很有用，这样就不需要再使用boolean flag然后进行检查是否可以再执行了。
+
+```javascript
+var initialize = _.once(createApplication);
+initialize();
+initialize();
+//其实只初始化了一次，第二次是没有效果的
+```
+
+```javascript
+_.once = _.partial(_.before, 2);
+```
+
+## 用于对象的一些方法
+
+`_.keys`和`_.allKeys`前面都已经写过了。
+
+### _.values(object)
+
+返回对象所有own的属性的值
+
+```javascript
+_.values({one: 1, two: 2, three: 3});
+//[1, 2, 3]
+```
+
+```javascript
+_.values = function(obj){
+	var keys = _.keys(obj);
+	var length = keys.length;
+	var values = Array(length);
+	for(var i = 0; i < length; i++){
+		values[i] = obj[keys[i]];
+	}
+	return values;
+}
+```
+
+### _.mapObject(object, iteratee, [context])
+
+类似于数组的map方法，只不过是针对对象的，将对象的值改变。
+
+```javascript
+_.mapObject({start: 5, end: 12}, function(val, key){
+	return val + 5;
+});
+//{start: 10, end: 17}
+```
+
+```javascript
+_.mapObject = function(obj, iteratee, context){
+	iteratee = cb(iteratee, context);
+	var keys = _.keys(obj),
+		length = keys.length,
+		results = {},
+		currentKey;
+	for(var index = 0; index < length; index++){
+		currentKey = keys[index];
+		results[currentKey] = iteratee(obj[currentKey], currentKey, obj);
+	}
+	return results;
+}
+```
+
+### _.pairs(object)
+
+将对象转为键值对的数组
+
+```javascript
+_.pairs({one: 1, two: 2, three: 3});
+//[["one", 1], ["two", 2], ["three", 3]]
+```
+
+```javascript
+_.pairs = function(obj){
+	var keys = _.keys(obj);
+	var length = keys.length;
+	var pairs = Array(length);
+	for(var i = 0; i < length; i++){
+		pairs[i] = [keys[i], obj[keys[i]]];
+	}
+	return pairs;
+}
+```
+
+### _.invert(object)
+
+返回一个对象的拷贝，只不过原来的键变成了值，原来的值变成了键。为了要让这个函数奏效，是有要求的。那就是你所有的对象的值必须是唯一的，并且是可序列化的字符串。
+
+```javascript
+_.invert({Moe: "Moses", Larry: "Louis", Curly: "Jerome"});
+//{Moses: "Moe", Louis: "Larry", Jerome: "Curly"};
+```
+
+```javascript
+_.invert = function(obj){
+	var result = {};
+	var keys = _.keys(obj);
+	for(var i = 0, length = keys.length; i < length; i++){
+		result[obj[keys[i]]] = keys[ik];
+	}
+	return result;
+}
+```
+
+### _.functions(object)
+
+返回一个序列化的列表，将一个对象中所有方法的名字都返回回来——也就是说，返回对象中所有函数属性的名称。
+
+```javascript
+_.functions(_);
+//["all", "any", "bind", "bindAll", "clone", "compact", "compose" ...
+```
+
+```javascript
+_.functions = _.methods = function(obj){
+	var names = [];
+	for(var key in obj){
+		if(_.isFunction(obj[key])) names.push(key);
+	}
+	return names.sort();
+}
+```
+
+接下来的`_.extend`和`_.extendOwn`都已经在前面写过了，这里不重复了。
+
+### _.findKey(object, predicate, [context])
+
+会返回通过了predicate函数的属性的key，如果没有的话，返回`undefined`
+
+```javascript
+_.findKey = function(obj, predicate, context){
+	predicate = cb(predicate, context);
+	var keys = _.keys(obj), key;
+	for(var i = 0; length = keys.length; i < length; i++){
+		key = keys[i];
+		if(predicate(obj[key], key, obj)) return key;
+	}
+}
+```
+
+### _.pick(object, *keys)
+
+返回object的一个副本，但是是经过过滤的，留下的都是keys白名单中有的（或者是由有效的key组成的数组）。或者也可以提供predicate函数，过滤出哪些key是要被捡出来的。
+
+```javascript
+_.pick({name: 'moe', age: 50, userid: 'moe1'}, 'name', 'age');
+//{name: 'moe', age: 50}
+_.pick({name: 'moe', age: 50, userid: 'moe1'}, function(value, key, object) {
+  return _.isNumber(value);
+});
+//{age: 50}
+```
+
+```javascript
+_.pick = function(object, oiteratee, context){
+	var result = {}, obj = object, iteratee, keys;
+	if(obj == null) return result;
+	if(_.isFunction(oiteratee)){
+		keys = _.allKeys(obj);
+		iteratee = optimizeCb(oiteratee, context);
+	} else {
+		keys = flatten(arguments, false, false, 1);
+		//内部的flatten是这样用的：flatten = function(input, shallow, strict, startIndex)，具体解析在前面写过。
+		iteratee = function(value, key, obj){ return key in obj; };
+		obj = Object(obj);
+	}
+	for(var i = 0, length = keys.length; i < length; i++){
+		var key = keys[i];
+		var value = obj[key];
+		if(iteratee(value, key, obj)) result[key] = value;
+	}
+	return result;
+}
+```
+
+
 
 
 

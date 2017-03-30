@@ -1780,6 +1780,26 @@ _.debounce = function(func, wait, immediate){
 
 接下来看设置immediate为true的时候，debounced的函数第一次执行，设置了时间戳，callNow为真，设置了定时器。然后进入`if(callNow)`的分支，直接执行了func。再次触发debounced函数，如果wait时间还没过去，这时候是有定时器的，所以无法再次设置定时器，同时因为!timeout为false，所以callNow也为false，所以func也不会直接执行。如果再次触发debounced函数，wait时间已经过去了，之前设置的定时器会执行later，由于`if(!immediate)`的判断，func不会直接执行，但是定时器却清掉了。所以这个时候callNow的判断又为真了，又可以直接执行func了。因此，这样就实现了，设置immediate为true的话，在wait开始的头上直接执行func，但是wait期间，还是不会执行func。除非wait毫秒过去，才能再度触发func。
 
+### _.wrap(function wrapper)
+
+将第一个传入的function包在wrapper函数里面，使得function成为wrapper的第一个参数。这样允许你控制在function之前、之后做些什么事情，或者以什么条件来执行原始的function。
+
+```javascript
+//实现非常简单
+_.wrap = function(func, wrapper){
+	return _.partial(wrapper, func);
+}
+```
+
+应用：
+
+```javascript
+var hello = function(name){ return "hello: " + name; };
+hello = _.wrap(hello, function(func){
+	return "before, " + func("moe") + ", after";
+});
+```
+
 
 
 

@@ -1727,7 +1727,7 @@ leading禁用就更巧妙了，所谓leading禁用，就是马上要触发的这
 
 `leading === false`和`trailing === false`可以简单理解为“掐头”和“去尾”。
 
-###_.debounce(function, wait, [immediate])
+### _.debounce(function, wait, [immediate])
 
 创建一个新的debounced的函数，使得function的执行要等到它最后一次触发之后wait毫秒之后。使用场景例如，要等到input输入告一段落之后再执行某个而行为。例如：渲染Markdown评论的预览、在窗口resize之后重新计算layout等等。
 

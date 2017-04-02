@@ -2062,6 +2062,385 @@ _.pick = function(object, oiteratee, context){
 }
 ```
 
+### _.omit(object, *keys)
+
+返回object的一个copy，但是将列入黑名单的Keys（或者keys的数组）过滤掉。第二个参数还可以是一个predicate函数，用于判断哪些key要过滤掉。
+
+```javascript
+_.omit({name: 'moe', age: 50, userid: 'moe1'}, 'userid');
+// {name: 'moe', age: 50}
+_.omit({name: 'moe', age: 50, userid: 'moe1'}, function(value, key, object) {
+  return _.isNumber(value);
+});
+// {name: 'moe', userid: 'moe1'}
+```
+
+```javascript
+_.omit = function(obj, iteratee, context){
+	if(_.isFunction(iteratee)){
+		iteratee = _.negate(iteratee);
+	} else {
+		var keys = _.map(flatten(arguments, false, false, 1), String);
+		iteratee = function(value, key){
+			return !_.contains(keys, key);
+		}
+	}
+	return _.pick(obj, iteratee, context);
+}
+```
+
+### _.defaults(object, *defaults)
+
+用defaults对象填充object中的undefined属性，并返回这个object。一旦这个属性被填充，再使用这个defaults方法将不会有任何效果。
+
+```javascript
+var iceCream = {flavor: "chocolate"};
+_.defaults(iceCream, {flavor: "vanilla", sprinkles: "lots"});
+// {flavor: "chocolate", sprinkles: "lots"}
+```
+
+```javascript
+_.defaults = createAssigner(_.allkeys, true);
+```
+
+### _.create(prototype, props)
+
+用给定的prototype创建一个新对象，可选择地将props作为它自己拥有的(own)属性。基本上就是跟Object.create一样，但是不用搞那些麻烦的属性描述符了。
+
+```javascript
+var moe = _.create(Stooge.prototype, {name: "Moe"});
+```
+
+```javascript
+_.create = function(prototype, props){
+	var result = baseCreate(prototype);
+	if(props) _.extendOwn(result, props);
+	return result;
+}
+```
+
+### _.clone(object)
+
+为提供的“纯”对象创建一个浅拷贝。任何嵌套的对象或数组都通过引用拷贝，不会复制。
+
+纯对象就是直接通过声明变量创建的对象，而不是用new构造函数的形式创建的对象。
+
+```javascript
+_.clone = function(obj){
+	if(!_.isObject(obj)) return obj;
+	return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
+}
+```
+
+### _.tap(object, interceptor)
+
+在object上触发interceptor函数，然后返回object。这个方法的主要目的就是“利用”chain方法，使得在链式调用中可以在这个链当中的结果上进行一些操作。
+
+interceptor的中文意思是“拦截机、拦截器”
+
+```javascript
+_.chain([1, 2, 3, 200])
+	.filter(function(num){ return num % 2 == 0; })
+	.tap(alert)
+	.map(function(num){ return num * num; })
+	.value();
+//弹出[2, 200]
+//[4, 40000]
+```
+
+```javascript
+_.tap = function(obj, interceptor){
+	interceptor(obj);
+	return obj;
+}
+```
+
+### _.isMatch(object, properties)
+
+这个方法能告诉你object中是否包含properties中的那些键值对
+
+```javascript
+var stooge = {name: 'moe', age: 32};
+_.isMatch(stooge, {age: 32});
+//true
+```
+
+```javascript
+_.isMatch = function(object, attrs){
+	var keys = _.keys(attrs), length = keys.length;
+	if(object == null) return !length;
+	var obj = Object(object);
+	for(var i = 0; i < length; i++){
+		var key = keys[i];
+		if(attrs[key] !== obj[key] || !(key in obj)) return false;
+	}
+	return true;
+}
+```
+
+### _.isEqual(object, other)
+
+对两个对象进行深层比较，来绝对这两个对象是否是相等的。
+
+```javascript
+var stooge = {name: 'moe', luckyNumbers: [13, 27, 34]};
+var clone  = {name: 'moe', luckyNumbers: [13, 27, 34]};
+stooge == clone;
+// false
+_.isEqual(stooge, clone);
+// true
+```
+
+```javascript
+_.isEqual = function(a, b){
+	return eq(a, b);
+}
+```
+
+```javascript
+// 内部函数eq
+var eq = function(a, b, aStack, bStack){
+	//0,-0,+0用三等号比较，返回的都是true，但是它们不是完全相等的，下面这一句就是判断这个的。
+	if(a === b) return a !== 0 || 1 / a === 1 / b;
+	//由于null == undefined，所以如果其中一项是null的话，那么必须要用三个等号进行比较
+	if(a == null || b == null) return a === b;
+
+	if(a instanceof _) a = a._wrapped;
+	if(b instenceof _) b = b._wrapped;
+	var className = toString.call(a);
+	if(className !== toString.call(b)) return false;
+	switch(className){
+		//字符串、数字、正则、日期和布尔类型，都是用值来比较的
+		case '[object RegExp]':
+		//正则表达式也是用 '' + a === '' + b这一句来判断的。也就是说，正则是强制转化为字符串类型进行比较（注：'' + /a/i === '/a/i')
+		case '[object String]':
+		//基本类型和对应的包装类型是相等的，也就是说'5'等于new String('5')；/a/与new RegExp('a')也是相等的。
+		//通过+操作符，将包装类型转成了基本类型
+			return '' + a === '' + b;
+		case '[object Number]':
+			//下面这一句是判断NaN的，两个NaN在underscore中会判断为相等的；Object(NaN)与NaN也是相等的
+			if(+a !== +a) return +b !== +b;
+			//下面是排除0的干扰，通过+a可以将Number()保障类型转为基本类型。
+			return +a === 0 ? 1 / +a === 1 / b : +a === +b;
+		//一下对Date和Boolean的判断，使用+操作符可以转为基本类型的数字。
+		//var a = new Boolean(true); 
+		//+a; => 1
+		//var b = new Boolean(false);
+		//+b; => 0
+		//var c = new Date();
+		//+c; => 1491106648303
+
+		//var x = new Date(NaN); var y = new Date(NaN);
+		//+x === +y; => false
+		case '[object Date]':
+		case '[object Boolean]':
+			return +a === +b;
+	}
+
+	var areArrays = className === '[object Array]';
+	if(!areArrays){//如果a不是数组
+		//如果a不是object或b不是object，就返回false
+		if(typeof a != 'object' || typeof b != 'object') return false;
+		//到这里，a和b都应该是object了
+		var aCtor = a.constructor, bCtor = b.constructor;
+		//如果a和b的构造函数不同，两个对象不一定不相等。比如a、b在不同的iframe中。
+		//什么时候aCtor instanceof aCtor？举个例子：
+		//var aCtor = function(){return{name: 'abc', age:123};};
+		//var aP1 = new aCtor;
+		//aP1.constructor instanceof aP1.constructor; => true
+
+		//如果aCtor !== bCtor那么也不说明a、b两个对象不相等。有可能在两个frame里面。接下来判断，a和b的constructor是否都为函数，并且这两个构造函数都是直接返回了一个对象作为实例，就像上面注释举得例子这样。如果有一个其实是返回的指向自身内部的this，那么两者也就不全等了，因为两个的原型链是不一样的。接下来还要判断，是否两者都有constructor这个属性，要是万一一个是通过构造函数返回来的，另外一个不是通过构造函数，而直接是变量声明得来的，那么两者也不算做全等。
+
+		//此处理解不够细致，需要再研究
+		if(aCtor !== bCtor && !(_.isFunction(aCtor) && aCtor instanceof aCtor && _.isFunction(bCtor) && bCtor instanceof bCtor) && ('constructor' in a && 'constructor' in b)){
+			return false;
+		}
+	}
+
+	//创建了一个栈，用来放被遍历的数组。第一次调用eq()，没有传入这两个参数，之后递归的话，这两个参数就有了。
+	aStack = aStack || [];
+	bStack = bStack || [];
+	var length = aStack.length;
+	while(length--){
+		if(aStack[length] === a) return bStack[length] === b;
+	}
+	aStack.push(a);
+	bStack.push(b);
+
+	//举个例子，在这个地方将aStack和bStack打印出来：
+	//用_.isEqual([1, [2, [3, [4, 5]]]], [1, [2, [3, [4, 5]]]])举例
+	/*
+	aStack: [[1,[2,[3,[4,5]]]]] ; bStack: [[1,[2,[3,[4,5]]]]]
+	aStack: [[1,[2,[3,[4,5]]]],[2,[3,[4,5]]]]; bStack: [[1,[2,[3,[4,5]]]],[2,[3,[4,5]]]];
+	aStack: [[1,[2,[3,[4,5]]]],[2,[3,[4,5]]], [3,[4,5]]]; ; bStack: [[1,[2,[3,[4,5]]]],[2,[3,[4,5]]], [3,[4,5]]];
+	aStack: [[1,[2,[3,[4,5]]]],[2,[3,[4,5]]], [3,[4,5]],[4, 5]]; ; bStack: [[1,[2,[3,[4,5]]]],[2,[3,[4,5]]], [3,[4,5]],[4, 5]];
+	=>true
+	最后一步，展开成那样，最后的[4, 5]遍历，判断出来相等，然后依次返回来，[4, 5]相等了，那么[3, [4, 5]]也相等，依次向前推（一层一层的true返回回来）。所以当嵌套数组拆解成最后一个那种的stack之后，一下子所有问题就解决了
+	*/
+
+	if(areArrays){ 
+		//数组比较走这个分支
+		length = a.length;
+		if(length !== b.length) return false;
+		while(length--){
+			if(!eq(a[length], b[length], aStack, bStack)) return false;
+		}
+	} else {
+		//对象比较走这个分支
+		var keys = _.keys(a), key;
+		length = keys.length;
+
+		if(_.keys(b).length !== length) return false;
+		while(length--){
+			key = keys[length];
+			if(!(_.has(b, key) && eq(a[key], b[key], aStack, bStack))) return false;
+		}
+	}
+
+	//与aStack.push相对应
+	aStack.pop();
+	bStack.pop();
+	return true;
+}
+```
+
+### _.isEmpty(object)
+
+判断对象中是不是有own properties。对数组来说，length为0就是空的。
+
+```javascript
+_.isEmpty = function(obj){
+	if(obj == null) return true;
+	if(isArrayLike(obj) && (_.isArray(obj) || _.isString(obj) || _.isArguments(obj))) return obj.length === 0;
+	return _.keys(obj).length === 0;
+}
+```
+
+### _.isElement(object)
+
+如果object是个dom元素，就返回true
+
+```javascript
+_.isEmpty(jQuery('body')[0]);
+//true
+```
+
+```javascript
+_.isElement = function(obj){
+	return !!(obj && obj.nodeType === 1);
+}
+```
+
+### _.isArray(object)
+
+```javascript
+_.isArray = nativeIsArray || function(obj){
+	return toString.call(obj) === '[object Array]';
+}
+```
+
+### _.isObject(object)
+
+```javascript
+_.isObject = function(obj){
+	var type = typeof obj;
+	return type === 'function' || type === 'object' && !!obj;
+}
+```
+
+//注意看上面源码，如果传入的是null，经过_.isObject来判断，会返回false
+
+```javascript
+typeof null
+//'object'
+_.isObject(null);
+//false
+```
+
+### _.isArguments, _.isFunction, _.isString, _.isNumber, _.isDate, _.isRegExp, _.isError
+
+```javascript
+_.each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp', 'Error'], function(name){
+	_['is' + name] = function(obj){
+		return toString.call(obj) === '[object ' + name + ']';
+	}
+})
+```
+
+```javascript
+//兼容IE9以下浏览器，在IE9下，对arguments调用Object.prototype.toString.call，返回[object Object]，并非我们想要的。这里用了判断是否存在arguments.callee来进行兼容
+if(!_.isArguments(arguments)){
+	_.isArguments = function(obj){
+		return _.has(obj, 'callee');
+	}
+}
+```
+
+☆☆☆ 下面的兼容没看明白：参考[链接](https://github.com/jashkenas/underscore/issues/1621)
+
+```javascript
+//以下对_.isFunction进行了优化，这里没有看明白为什么
+if(typeof /./ != 'function' && typeof Int8Array != 'object'){
+	_.isFunction = function(obj){
+		return typeof obj == 'function' || false;
+	}
+}
+```
+
+### _.isFinite(object)
+
+```javascript
+_.isFinite = function(obj){
+	return isFinite(obj) && !isNaN(parseFloat(obj));
+}
+//js自带的isFinite返回false会有两种情况，一种是正负Infinity，第二种就是NaN
+```
+
+### _.isNaN(object)
+
+```javascript
+_.isNaN = function(obj){
+	return _.isNumber(obj) && obj != +obj;
+	//NaN是唯一不等于自己的数字类型
+}
+```
+
+### _.isBoolean(object)
+
+```javascript
+_.isBoolean = function(obj){
+	return obj === true || obj === false || toString.call(obj) === '[object Boolean]';
+}
+```
+
+### _.isNull(object)
+
+```javascript
+_.isNull = function(obj){
+	return obj === null;
+}
+```
+
+### _.isUndefined(object)
+
+```javascript
+_.isUndefined = function(obj){
+	return obj === void 0;
+}
+```
+
+### _.has(object, key)
+
+如果object自己拥有这个key属性，就返回true
+
+```javascript
+_.has = function(obj, key){
+	return obj != null && hasOwnProperty.call(obj, key);
+}
+```
+
+
+
 
 
 

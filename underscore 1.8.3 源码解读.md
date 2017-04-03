@@ -22,6 +22,19 @@ var _ = function(obj){
 
 上述代码中我们看到了 `new` ，这说明 _ 这个函数其实是一个构造函数。代码写到这里，如果我们为这个构造函数传入一个对象 `[1, 2, 3]` 会得到一个 _ 的实例对象：`{_wrapped: [1, 2, 3]}`，该实例的 constructor 就是 _，而原型就是Object。如果我们对 `_(_([1, 2, 3]))`求值，得到的还是 `{_wrapped: [1, 2, 3]}`，因为已经是 _ 的实例，就直接把这个对象返回了。
 
+导出underscore对象
+
+```javascript
+if(typeof exports != 'undefined'){
+	if(typeof module !== 'undefined' && module.exports){
+		exports = module.exports = _;
+	}
+	exports._ = _;
+} else {
+	root._ = _; //如果是浏览器的话，那么root就是window对象，这时候就将_对象挂载在window._属性下。
+}
+```
+
 ### optimizeCb
 
 ```javascript
@@ -2438,6 +2451,548 @@ _.has = function(obj, key){
 	return obj != null && hasOwnProperty.call(obj, key);
 }
 ```
+
+## 其他一些实用方法
+
+### _.noConflict()
+
+该方法将`_`归还给之前的所有者，然后返回一个对象作为Underscore对象的引用。
+
+```javascript
+var underscore = _.noConflict();
+```
+
+```javascript
+_.noConflict = function(){
+	root._ = previousUnderscore;
+	return this;
+}
+```
+
+### _.identity(value)
+
+value是什么，就原样返回去
+
+```javascript
+_.identity = function(value){
+	return value;
+}
+```
+
+### _.constant(value)
+
+创建了一个函数这个函数返回与value同样的值
+
+```javascript
+_.constant = function(value){
+	return function(){
+		return value;
+	}
+}
+```
+
+### _.noop()
+
+不管传了什么参数进去，都返回undefined。这个方法的用处就是在一些可以选择性的传入回掉函数的时候，可以用这个来占位。
+
+```javascript
+_.noop = function(){};
+```
+
+### _.property(key)
+
+```javascript
+var stooge = {name: 'moe'};
+'moe' === _.property('name')(stooge);
+//true
+```
+
+```javascript
+var property = function(key){
+	return function(obj){
+		return obj == null ? void 0 : obj[key];
+	}
+}
+
+_.property = property
+```
+
+### _.propertyOf(object)
+
+就是_.property反过来。接收一个object作为参数，返回一个函数，那个函数能够返回某个属性的值。
+
+```javascript
+var stooge = {name: 'moe'};
+_.propertyOf(stooge)('name');
+//'moe'
+```
+
+```javascript
+_.propertyOf = function(obj){
+	return obj == null ? function(){} : function(key){
+		return obj[key];
+	}
+}
+```
+
+### _.matcher(attrs)
+
+返回一个predicate函数，这个函数会告诉你：如果你传给它一个对象，它是否包含所有attrs中的键值对。
+
+```javascript
+var ready = _.matcher({selected: true, visible: true});
+var readyToGoList = _.filter(list, ready);
+```
+
+```javascript
+_.matcher = _.matches = function(attrs){
+	attrs = _.extendOwn({}, attrs);
+	return function(obj){
+		return _.isMatch(obj, attrs);
+	}
+}
+```
+
+### _.times(n, iteratee, [context])
+
+触发给定的iteratee函数n次。每一次触发iteratee都有一个index参数。产生的是返回的值所构成的一个数组。
+
+```javascript
+_.times = function(n, iteratee, context){
+	var accum = Array(Math.max(0, n));
+	iteratee = optimizeCb(iteratee, context, 1);
+	for(var i = 0; i < n; i++) accum[i] = iteratee(i);
+	return accum;
+}
+```
+
+```javascript
+_.times(3, function(i){ return i*i; })
+//[0, 1, 4]
+```
+
+### _.random(min, max)
+
+返回min和max之间的随机的一个整数。如果你只传入了一个数值，那么就会返回0和那个数值之间的一个随机整数。
+
+```javascript
+_.random = function(min, max){
+	if(max == null){
+		max = min;
+		min = 0;
+	}
+	return min + Math.floor(Math.random() * (max - min + 1));
+}
+```
+
+### _.now()README.md
+
+返回表示当前时间戳的整数。
+
+```javascript
+_.now = Date.now || function(){
+	return new Date().getTime();
+}
+```
+
+### _.escape(string), _.unescape(string)
+
+`_.escape`将一串要插入HTML中的字符串，该转义的转义出来。
+
+```javascript
+_.escape('Curly, Larry & Moe');
+//'Curly, Larry &amp; Moe'
+```
+
+`_.unescape`正好是`_.escape`反过来。
+
+```javascript
+_.unescape('Curly, Larry &amp; Moe');
+//'Curly, Larry & Moe'
+```
+
+源码：
+
+```javascript
+var escapeMap = {
+	'&': '&amp;',
+	'<': '&lt;',
+	'>': '&gt;',
+	'"': '&quote;',
+	"'": '&#x27;',
+	'`': '&#x60;'
+};
+var unescapeMap = _.invert(escapeMap);
+var createEscaper = function(map){
+	var escaper = function(match){
+		return map[match];
+	}
+
+	var source = '(?:' + _.keys(map).join('|') + ')';
+	//(?:x) 匹配'x'但不记住匹配项。这叫做非捕获括号，使你能够定义为正则表达式运算符一起使用的子表达式。
+	var testRegexp = RegExp(source);
+	var replaceRegexp = RegExp(source, 'g');
+	return function(string){
+		string = string == null ? '' : '' + string;
+		return testRegexp.test(string) ? string.replace(replaceRegexp, escaper) : string;
+	}
+}
+
+_.escape = createEscaper(escapeMap);
+_.unescape = createEscaper(unescapeMap);
+```
+
+### _.result(object, property, [defaultValue])
+
+如果这里传入的property是个函数，那么就以object为context来运行它，否则就返回object以property为键名的值。入股哟提供了defaultValue，并且property在object中并不存在或者是undefined，那么就返回default。如果defaultValue是函数的话，跟property的处理方式是一样的。
+
+```javascript
+var object = {cheese: 'crumpets', stuff: function(){ return 'nonsense'; }};
+_.result(object, 'cheese');
+// "crumpets"
+_.result(object, 'stuff');
+// "nonsense"
+_.result(object, 'meat', 'ham');
+// "ham"
+```
+
+```javascript
+_.result = function(object, property, fallback){
+	var value = object == null ? void 0 : object[property];
+	if(value === void 0){
+		value = fallback;
+	}
+	return _.isFunction(value) ? value.call(object) : value;
+}
+```
+
+### _.uniqueId([prefix])
+
+为客户端的model或dom元素产生一个全局唯一的id。如果传入了prefix，那么id一开始就会有这个作为前缀。
+
+```javascript
+_.uniqueId('contact_');
+//'contact_104'
+```
+
+```javascript
+var idCounter = 0;
+_.uniqueId = function(prefix){
+	var id = ++idCounter + '';
+	return prefix ? prefix + id : id;
+}
+```
+
+### _.template(templateString, [settings])
+
+将javascript模板编译成函数，这些函数求值之后可用于页面渲染。该方法对于从JSON数据源渲染HTML比较复杂的部分很有用。模板函数可以进行值的插入（使用`<%= ... %>`），也可以执行javascript代码（使用`<% ... %>`)。如果你希望插入一个值，但是还要给HTML转义，那么就使用`<%- ... %>`。当你在给模板函数求值的时候，传入一个数据对象，这个对象的属性与模板的自由变量相对应。`settings`参数应该是一个哈希表，里面包含的任何需要被重写的_.templateSettings。
+
+```javascript
+var compiled = _.template("hello: <%= name %>");
+compiled({name: 'moe'});
+//"hello: moe"
+
+var template = _.template("<b><%- value %></b>");
+template({value: '<script>'});
+//"<b>&lt;script&gt;</b>"
+```
+
+在javascript代码中，你也可以使用print。这样做有时候比用`<%= ... %>`更方便。
+
+```javascript
+var compiled = _.template("<% print('Hello ' + epithet); %>");
+compiled({epithet: "stooge"});
+//"Hello stooge"
+```
+
+`<% ... %>`这种模板风格被称为ERB风格的分隔符。如果你不喜欢，也可以换成其他分隔符。定义一个叫`interpolate`的属性，这个属性是一个正则表达式，它会匹配哪些东西是要原样插入进模板的。有一个`escape`属性，也是正则表达式，匹配的是经过HTML转义之后，应当插入的表达式；还有一个`evaluate`正则表达式，用于匹配应该需要被求值的，而不是插入结果字符串的表达式。你可以定义或者略去这三者的任何一个或几个。例如，如果想要用小胡子风格的模板，那么可以这样定义：
+
+```javascript
+_.templateSettings = {
+	interpolate: /\{\{(.+?)\}\}/g
+}
+
+var template = _.template("Hello {{ name }}!");
+template({name: "Mustache"});
+//"Hello Mustache!"
+```
+
+默认情况下，模板通过`with`将你传入的数据放在局部作用域中。但是，你可以在`variable`设置中专门给指定一个变量名。这样可以显著提升渲染模板的速度。
+
+```javascript
+_.template("Using 'with': <%= data.answer %>", {variable: 'data'})({answer: 'no'});
+//"Using 'with': no"
+```
+
+预编译模板对于调试你无法重现的错误非常有帮助。这是因为预编译的模板可以提供行号和堆栈追踪，这是你在客户端编译模板的时候不可能做到的。在编译好的模板函数上，有一个`source`属性可以提供简单的预编译功能
+
+```javascript
+<script>
+	JST.project = <%= _.template(jstText).source %>;
+</script>
+```
+
+举个例子：
+
+```javascript
+compiled = _.template("interpolate: <%= name %>; evaluate: <% 1 + 2 %>");
+
+compiled.source;
+/*
+"function(obj){
+var __t,__p='',__j=Array.prototype.join,print=function(){__p+=__j.call(arguments,'');};
+with(obj||{}){
+__p+='interpolate: '+
+((__t=( name ))==null?'':__t)+
+'; evaluate: ';
+ 1 + 2 
+__p+='';
+}
+return __p;
+}"
+*/
+```
+
+源码：
+
+```javascript
+_.templateSettings = {
+	evaluate: /<%([\s\S]+?)%>/g,
+	interpolate: /<%=([\s\S]+?)%>/g,
+	escape: /<%-([\s\S]+?)%>/g
+};
+
+var noMatch = /(.)^/;
+
+var escapes = {
+	"'": "'",
+	'\\': '\\',
+	'\r': 'r',
+	'\n': 'n',
+	'\u2028': 'u2028',
+	'\u2029': 'u2029'
+} 
+var escaper = /\\|'|\r|\n|\u2028|\u2029/g;
+var escapeChar = function(match){
+	return '\\' + escapes[match];
+}
+
+_.template = function(text, settings, oldSettings){
+	if(!settings && oldSettings) settings = oldSettings;
+	settings = _.defaults({}, settings, _.templateSettings);
+
+	var matcher = RegExp([
+		(settings.escape || noMatch).source,
+		(settings.interpolate || noMatch).source,
+		(settings.evaluate || noMatch).source
+	].join('|') + '|$', 'g');
+	//regExp.source 这个正则表达式的source属性返回的是正则对象中的文本。但是不包含两个斜线以及任何g这样的flag。
+	//如果没有改过settings，那么最终的matcher就会变成：
+	///<%-([\s\S]+?)%>|<%=([\s\S]+?)%>|<%([\s\S]+?)%>|$/g
+
+	var index = 0;
+	var source = "__p+='";
+	text.replace(matcher, function(match, escape, interpolate, evaluate, offset){
+		source += text.slice(index, offset).replace(escaper, escapeChar);
+		index = offset + match.length;
+
+		if(escape){
+			source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
+		} else if (interpolate){
+			source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
+		} else if(evaluate){
+			source += "';\n" + evaluate + "\n__p+='";
+		}
+		return match;
+	});
+	source += "';\n";
+
+	if(!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+	
+	//下面写的是print功能
+	source = "var __t,__p='',__j=Array.prototype.join," + "print=function(){__p+=__j.call(arguments,'');};\n" + source + 'return __p;\n';
+
+	try{
+		//obj为传入的数据，传入_是为了函数内部使用用到了_.escape函数
+		var render = new Function(settings.variable || 'obj', '_', source);
+	} catch(e){
+		e.source = source;
+		throw e;
+	}
+
+	var template = function(data){
+		return render.call(this, data, _);
+	}
+
+	var argument = settings.variable || 'obj';
+	template.source = 'function(' + argument + '){\n' + source + '}';
+
+	return template;
+}
+```
+
+### _.chain(obj), _.chain(obj).value()
+
+返回被包装的（wrapped）那个对象。然后再在这个对象上执行方法，又会返回保障的函数，直到value方法执行。
+
+```javascript
+var stooges = [{name: 'curly', age: 25}, {name: 'moe', age: 21}, {name: 'larry', age: 23}];
+var youngest = _.chain(stooges)
+				.sortBy(function(stooge){ return stooge.age; })
+				.map(function(stooge){ return stooge.name + ' is ' + stooge.age; })
+				.first()
+				.value();
+//"moe is 21"
+```
+
+`_.chain(obj).value()`可以将包装对象的值抽出来
+
+```javascript
+_.chain([1, 2, 3]).reverse().value();
+//[3, 2, 1]
+```
+
+```javascript
+var lyrics = [
+  {line: 1, words: "I'm a lumberjack and I'm okay"},
+  {line: 2, words: "I sleep all night and I work all day"},
+  {line: 3, words: "He's a lumberjack and he's okay"},
+  {line: 4, words: "He sleeps all night and he works all day"}
+];
+
+_.chain(lyrics)
+  .map(function(line) { return line.words.split(' '); })
+  .flatten()
+  .reduce(function(counts, word) {
+    counts[word] = (counts[word] || 0) + 1;
+    return counts;
+  }, {})
+  .value();
+//Object {I'm: 2, a: 2, lumberjack: 2, and: 4, okay: 2…}
+```
+
+从上例中可以看到，数组原型方法也支持underscore的链式操作。具体原因，可以看下面关于OOP的源码。
+
+源码：
+
+```javascript
+_.chain = function(obj){
+	var instance = _(obj);
+	instance._chain = true; //属性_chain为true就是可以继续链式操作
+	return instance;
+}
+//使用_.chain之后，之所以可以这样一直调用下去，要看后面的OOP的相关代码
+```
+
+## 有关OOP的一些代码
+
+```javascript
+var result = function(instance, obj){
+	return instance._chain ? _(obj).chain() : obj;
+}
+//辅助函数，用于持续的链式操作
+```
+
+### _.mixin(object)
+
+允许你扩展Underscore。传入哈希值{name: function}这样的定义就可以让你将自己的方法添加到Underscore对象中以及OOP包装对象中。
+
+```javascript
+_.mixin({
+	capitalize: function(string){
+		return string.charAt(0).toUpperCase() + string.substring(1).toLowerCase();
+	}
+});
+
+_("fabio").capitalize();
+//"Fabio"
+_.capitalize("fabio");
+//"Fabio"
+```
+
+源码：
+
+```javascript
+_.mixin = function(obj){
+	//_.functions方法返回的是对象上的所有方法的名称组成的数组
+	_.each(_.functions(obj), function(name){
+		var func = _[name] = obj[name]; //添加到underscore对象上了
+		_.prototype[name] = function(){ //添加到了_的实例的原型上去了，那么每个原型都具备了这些方法
+			var args = [this._wrapped]; 
+			//this指的就是包装对象，this._wrapped就是原本的纯对象
+			push.apply(args, arguments); 
+			//arguments就是除了第一个obj以外的其他所有的参数，现在通过push，将调用underscore方法的所有参数都凑齐了。
+			return result(this, func.apply(_, args)); //注意，一旦链式操作开始，那么每次链式操作返回的都是经过这个result函数的结果，(可以参考一下result函数的源码)也就是返回的是_(obj).chain()这个包装对象。要得到最终值的话，需要用.value()将包装在里面的那个对象抽出来。 
+		}
+	})
+}
+
+_.mixin(_); //将_上的所有方法都添加到underscore对象上了。
+```
+
+同时，underscore还将所有Array.prototype上有的方法也都加到包装对象上了。但是要注意，这些方法没有加到underscore对象上，所以，例如你调用`_.pop([1, 2, 3])`是不行的，`_`上没有这个方法。但是用链式调用是可以的。例如：
+
+```javascript
+_.chain([1, 2, 3]).pop().value();
+//[1, 2]
+```
+
+源码：
+
+```javascript
+//将Array.prototype上的所有的mutator方法加到包装对象上
+_.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name){
+	var method = ArrayProto[name];
+	_.prototype[name] = function(){
+		var obj = this.wrapped;
+		method.apply(obj, arguments);
+		//下面这一句，参考这个链接：http://stackoverflow.com/questions/24725560/javascript-why-need-to-delete-the-0-index-of-an-array
+		if((name === 'shift' || name === 'splice') && obj.length === 0) delete obj[0];
+		return result(this, obj);
+	}
+})
+```
+
+源码：
+
+```javascript
+//将所有Array上的accessor的函数加到包装对象上
+_.each(['concat', 'join', 'slice'], function(name){
+	var method = ArrayProto[name];
+	_.prototype[name] = function(){
+		return result(this, method.apply(this._wrapped, arguments));
+	}
+})
+```
+
+抽取包装对象中所包装的对象：value方法
+
+```javascript
+_.prototype.value = function(){
+	return this._wrapped;
+}
+```
+
+提供解包的代理，这是为了一些引擎操作的方法，比如算数方法或JSON的字符串化。
+
+```javascript
+_.prototype.valueOf = _.prototype.toJSON = _.prototype.value;
+_.prototype.toString = function(){
+	return '' + this._wrapped;
+}
+```
+
+最后兼容AMD规范
+
+```javascript
+if(typeof define === 'function' && define.amd){
+	define('underscore', [], function(){
+		return _;
+	})
+}
+```
+
+
 
 
 

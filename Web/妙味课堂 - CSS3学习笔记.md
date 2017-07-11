@@ -1,4 +1,4 @@
-#妙味课堂 - CSS3学习笔记
+# 妙味课堂 - CSS3学习笔记
 
 学习CSS3之前先讲几个问题：
 
@@ -6,7 +6,7 @@
 - 厂商前缀问题
 - 在JS中的写法：-webkit-transition => WebkitTransition; -o-transition => OTransition; -moz-transition => MozTransition
 
-##CSS3选择器 - 属性选择器
+## CSS3选择器 - 属性选择器
 
 - E[attr]只使用属性名，但没有确定任何属性值
 - E[attr="value"]指定属性名，并指定了该属性的属性值
@@ -73,7 +73,7 @@
 </html>
 ```
 
-##CSS3选择器 - 结构性伪类
+## CSS3选择器 - 结构性伪类
 
 - E:nth-child(n)  表示E父元素中的第n个字节点
 	- p:nth-child(odd){background:red}/*匹配奇数行*/
@@ -253,7 +253,7 @@
 </html>
 ```
 
-##CSS3选择器 - 伪类和伪元素
+## CSS3选择器 - 伪类和伪元素
 
 - E:target 表示当前的URL片段的元素类型，这个元素必须是E
 - E:disabled 表示不可点击的表单控件
@@ -496,7 +496,7 @@
 </html>
 ```
 
-##文字阴影
+## 文字阴影
 
 - text-shadow：x y blur color, …
 - 参数
@@ -590,7 +590,7 @@
 </html>
 ```
 
-##文字描边
+## 文字描边
 
 - -webkit-text-stroke:宽度 颜色 (只有webkit内核浏览器支持，一定要加-webkit-前缀)
 
@@ -610,7 +610,7 @@
 </html>
 ```
 
-##新增文本功能
+## 新增文本功能
 
 - direction  定义文字排列方式(全兼容)
 	- rtl 从右向左排列
@@ -657,7 +657,7 @@
 </html>
 ```
 
-##自定义文字
+## 自定义文字
 
 - 格式
 
@@ -677,7 +677,7 @@
 
 - 转换字体格式生成兼容代码http://www.fontsquirrel.com/fontface/generator
 
-##弹性盒模型
+## 弹性盒模型
 
 - 注意在使用弹性盒模型的时候，父元素必须要加display:box 或 display:inline-box
 - box-orient 定义盒模型的布局方向
@@ -758,9 +758,9 @@
 </html>
 ```
 
-##盒模型新增属性
+## 盒模型新增属性
 
-###盒模型阴影
+### 盒模型阴影
 
 - 用法
 	- box-shadow: [inset] x y blur [spread] color
@@ -789,7 +789,7 @@
 </html>
 ```
 
-###box-reflect 倒影
+### box-reflect 倒影
 
 - direction 方向 above | below | left | right;
 - 距离
@@ -812,7 +812,7 @@
 </html>
 ```
 
-###resize 自由缩放
+### resize 自由缩放
 
 - both 水平垂直都可以缩放
 - horizontal 只有水平方向可以缩放
@@ -835,7 +835,7 @@
 </html>
 ```
 
-###box-sizing 盒模型解析模式
+### box-sizing 盒模型解析模式
 
 - content-box 标准盒模型
 	- width/height = border + padding + content
@@ -861,7 +861,7 @@
 </html>
 ```
 
-##CSS3分栏布局
+## CSS3分栏布局
 
 - column-width 栏目宽度
 - column-count 栏目列数
@@ -894,7 +894,7 @@
 </html>
 ```
 
-##CSS3响应式布局
+## CSS3响应式布局
 
 - 媒体类型
 	- all 所有媒体
@@ -928,7 +928,7 @@
 	- &lt;link rel="stylesheet" type="text/css" href="styleB.css" media="screen and (min-width: 600px) and (max-width: 800px)">
 	- &lt;link rel="stylesheet" type="text/css" href="styleC.css" media="screen and (max-width: 600px)">
 
-##移动端meta
+## 移动端meta
 
 - &lt;meta name="viewport" content="" />
 	- width [pixel_value | device-width]
@@ -939,7 +939,7 @@
 	- maximum-scale 允许缩放的最大比例
 	- target-densitydpi [dpi_value | device-dpi | high-dpi | medium-dpi | low-dpi]
 
-##圆角
+## 圆角
 
 - border-radius: 1-4个数字 / 1-4个数字
 	- 前面是水平，后面是垂直
@@ -1036,7 +1036,7 @@
 </html>
 ```
 
-##边框
+## 边框
 
 - 边框图片 border-image
 	- border-image-source 引入图片
@@ -1046,7 +1046,7 @@
 		- round 平铺；repeat 重复；stretch 拉伸
 - 边框颜色 border-colors(多边框颜色只在firefox下实现了)
 
-##线性渐变
+## 线性渐变
 
 - 线性渐变格式
 	- linear-gradient([&lt;起点>||&lt;角度>,]?&lt;点>,&lt;点>...)
@@ -1175,7 +1175,7 @@
 </html>
 ```
 
-##径向渐变
+## 径向渐变
 
 - radial-gradient([&lt;起点>]?[&lt;形状>||&lt;大小>,]?&lt;点>,&lt;点>...);
 	- 起点：可以是关键字（left, top, right, bottom)，具体数值或百分比
@@ -1210,7 +1210,7 @@
 </html>
 ```
 
-##背景
+## 背景
 
 - 多背景
 	- 逗号分开
@@ -1274,14 +1274,14 @@
 </html>
 ```
 
-##遮罩
+## 遮罩
 
 - mask-image
 - mask-position
 - mask-repeat
 - 实例：特殊形状的幻灯片效果
 
-##transition过渡
+## transition过渡
 
 - transition-property 要运动的样式 ( all || [attr] || none )
 - transition-duration 运动时间
@@ -1452,7 +1452,7 @@
 </html>
 ```
 
-##2D变换
+## 2D变换
 
 - transform
 	- rotate() 旋转函数 取值度数
@@ -2040,7 +2040,7 @@ function removeEnd(obj,fn)
 </html>
 ```
 
-##3d变换
+## 3d变换
 
 - transform-style (preserve-3d) 建立3D空间
 - perspective 景深
@@ -2264,7 +2264,7 @@ function removeEnd(obj,fn)
 </html>
 ```
 
-##animation
+## animation
 
 - 关键帧 —— keyFrames
 	- 类似于flash
@@ -2329,7 +2329,7 @@ function removeEnd(obj,fn)
 </html>
 ```
 
-##animate——调用动画
+## animate——调用动画
 
 - 调用的标签(#div1、xxx:hover之类的)
 	- 必要属性

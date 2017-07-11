@@ -1,8 +1,8 @@
-#妙味课堂 - HTML5学习笔记
+# 妙味课堂 - HTML5学习笔记
 
-##新增的语义化标签
+## 新增的语义化标签
 
-###新的页面结构以及宽松的语法规范
+### 新的页面结构以及宽松的语法规范
 
 ``` html
 <!doctype html>
@@ -16,11 +16,11 @@
 </html>
 ```
 
-###新的结构化元素
+### 新的结构化元素
 
 - 语义化标签的由来 [http://devfiles.myopera.com/articles/572/idlist-url.htm](http://devfiles.myopera.com/articles/572/idlist-url.htm)
 
-###语义化标签
+### 语义化标签
 
 - &lt;header>&lt;/header> 页眉
 	- 主要用于页面的头部的信息介绍，也可用于板块头部
@@ -138,7 +138,7 @@
 </progress>
 ```
 
-###IE下的兼容
+### IE下的兼容
 
 - 插件：html5shiv.js
 - 标签
@@ -156,7 +156,7 @@
 - 样式
 	- HTML5语义化标签在IE6-8下，我们用js创造出来之后，它是不会有任何默认样式的甚至是display，所以在样式表里，要对这些标签定义一下它们默认的display
 
-###forms
+### forms
 
 - 新的输入型控件
 	-email：电子邮箱文本框，跟普通的没什么区别
@@ -291,7 +291,7 @@
 </html>
 ```
 
-##HTML5新特性的浏览器支持情况
+## HTML5新特性的浏览器支持情况
 
 [http://www.caniuse.com/#index](http://www.caniuse.com/#index)
 
@@ -339,7 +339,7 @@
 </html>
 ```
 
-##获取class列表属性
+## 获取class列表属性
 
 - classList
 	- length: class的长度
@@ -371,7 +371,7 @@
 </html>
 ```
 
-##JSON的新方法
+## JSON的新方法
 
 - parse(): 把字符串转成json
 	- 字符串中的属性要严格的加上引号
@@ -477,7 +477,7 @@
 </html>
 ```
 
-##data自定义数据
+## data自定义数据
 
 - dataset
 	- data-name: dataset.name
@@ -506,7 +506,7 @@
 </html>
 ```
 
-##延迟加载JS
+## 延迟加载JS
 
 - JS的加载会影响后面的内容加载
 	- 很多浏览器都采用了并行加载JS，但还是会影响其他内容
@@ -536,7 +536,7 @@
 </html>
 ```
 
-##历史管理
+## 历史管理
 
 - 触发历史管理：1. 跳转页面；2. hash；3. pushState
 - onhashchange: 改变hash值来管理
@@ -680,7 +680,7 @@
 </html>
 ```
 
-##拖放事件
+## 拖放事件
 
 - draggable:
 	- 设置为true，元素就可以拖拽了
@@ -1246,9 +1246,9 @@
 </html>
 ```
 
-##跨文档消息通信
+## 跨文档消息通信
 
-###postMessage对象
+### postMessage对象
 
 - 接收消息的窗口对象 .postMessage()
 - 一参 : 发送的数据；二参 : 接收的域
@@ -1418,7 +1418,7 @@ window.onload = function() {
 </html>
 ```
 
-###XMLHttpRequest Level 2
+### XMLHttpRequest Level 2
 
 - XMLHttpRequest 改进版
 	- 请求页面与数据页面必须属于不同的域
@@ -1625,7 +1625,7 @@ window.onload = function() {
 </html>
 ```
 
-###websocket
+### websocket
 
 - 互联网协议
 
@@ -1784,7 +1784,7 @@ socket.sockets.on('connection', function(socket) {
 });
 ```
 
-##HTML5的离线存储（applicationCache）
+## HTML5的离线存储（applicationCache）
 
 - 离线应用是什么
 	- 乘坐飞机、手机信号弱；去演讲的时候，可能没有网络，这个时候就可以采用离线应用
@@ -1794,7 +1794,7 @@ socket.sockets.on('connection', function(socket) {
 	- 快速响应页面，不必用多个HTTP占用资源带宽
 	- 缓存的可以是任何文件
 
-###搭建离线应用程序
+### 搭建离线应用程序
 
 - ① 服务器设置头信息：
 	- AddType text/cache-manifest.manifest
@@ -1822,7 +1822,7 @@ NETWORK
 a.jpg
 ```
 
-##Web Workers
+## Web Workers
 
 - 什么是worker
 	- JS的单线程（放入UI队列的个数，利用定时器解决）
@@ -1955,9 +1955,9 @@ self.onmessage = function(ev){
 }
 ```
 
-##HTML5其他功能
+## HTML5其他功能
 
-###内容编辑
+### 内容编辑
 
 - contenteditable="true"
 
@@ -1974,7 +1974,7 @@ self.onmessage = function(ev){
 </html>
 ```
 
-###语言输入
+### 语言输入
 
 - &lt;input type="text" x-webkit-speech />
 
@@ -2181,7 +2181,7 @@ self.onmessage = function(ev){
 </html>
 ```
 
-##本地存储
+## 本地存储
 
 - cookie
 	- 数据存储到计算机中，通过浏览器控制添加与删除数据
@@ -2640,7 +2640,7 @@ window.onload = function(){
 
 ```
 
-##音频和视频
+## 音频和视频
 
 - 标签
 	- audio、video

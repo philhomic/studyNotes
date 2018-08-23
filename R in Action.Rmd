@@ -1,0 +1,303 @@
+---
+title: "R in Action"
+output: html_notebook
+---
+
+# Part 1 Getting Started
+
+## 1.1 Introduction to R
+
+```{r}
+age <- c(1, 3, 5, 2, 11, 9, 3, 9, 12, 3)
+weight <- c(4.4, 5.3, 7.2, 5.2, 8.5, 7.3, 6.0, 10.4, 10.2, 6.1)
+# mean
+mean(weight)
+# standard deviation
+sd(weight)
+# correlation
+cor(age, weight)
+plot(age,weight)
+```
+
+```{r}
+options(digits=3)
+x <- runif(20)
+summary(x)
+hist(x)
+```
+
+```{r}
+# input script file
+source("filename")
+
+# text output
+sink("filename")
+
+# graphic output
+png("filename.png")
+```
+
+```{r}
+# make a picture and save it as a png
+x <- runif(20)
+png("1.png")
+hist(x)
+dev.off()
+```
+
+## 1.2 Creating a dataset
+
+- scalar
+- vector
+- matrix
+- array
+- data frame
+- list
+
+### vectors
+
+```{r}
+a <- c(1, 2, 5, 3, 6, -2, -4)
+b <- c("one", "two", "three")
+c <- c(TRUE, TRUE, TRUE, FALSE, TRUE, FALSE)
+
+a[3]
+b[c(1, 3)]
+c(2:4)
+```
+
+### matrix
+
+```{r}
+y <- matrix(1:20, nrow=5, ncol=4)
+y
+```
+
+```{r}
+cells <- c(1, 26, 24, 68)
+rnames <- c("R1", "R2")
+cnames <- c("C1", "C2")
+mymatrix <- matrix(cells, nrow=2, ncol=2, byrow=TRUE, dimnames=list(rnames, cnames))
+mymatrix
+```
+
+```{r}
+mymatrix <- matrix(cells, nrow=2, ncol=2, byrow=FALSE, dimnames=list(rnames, cnames))
+mymatrix
+```
+
+```{r}
+x <- matrix(1:10, nrow=2)
+x
+x[2,]
+x[,2]
+x[1, 4]
+x[1, c(4, 5)]
+```
+
+### array
+
+```{r}
+dim1 <- c("A1", "A2")
+dim2 <- c("B1", "B2", "B3")
+dim3 <- c("C1", "C2", "C3", "C4")
+z <- array(1:24, c(2, 3, 4), dimnames=list(dim1, dim2 ,dim3))
+z
+z[1, 2, 3]
+```
+
+### data frame
+
+```{r}
+patientID <- c(1, 2, 3, 4)
+age <- c(25, 34, 28, 52)
+diabetes <- c("Type1", "Type2", "Type1", "Type1")
+status <- c("Poor", "Improved", "Excellent", "Poor")
+patientdata <- data.frame(patientID, age, diabetes, status)
+patientdata
+```
+
+```{r}
+patientdata[1:2]
+```
+```{r}
+patientdata[c("diabetes", "status")]
+```
+
+```{r}
+patientdata$age
+```
+
+```{r}
+table(patientdata$diabetes, patientdata$status)
+```
+
+### attach, detach, and with
+
+```{r}
+attach(patientdata)
+  summary(age)
+detach(patientdata)
+```
+
+```{r}
+with(patientdata, {
+  summary(age)
+  table(diabetes, status)
+})
+```
+
+```{r}
+with(patientdata, {
+  stats <- status
+  stats2 <<- status
+})
+```
+
+```{r}
+stats
+```
+```{r}
+stats2
+```
+
+```{r}
+# case identifier specified in rowname option
+patientdata <- data.frame(patientID, age, diabetes, status, row.names=patientID)
+patientdata
+```
+
+### factor
+
+```{r}
+diabetes <- c("Type1", "Type2", "Type1", "Type1")
+factor(diabetes)
+```
+```{r}
+status <- c("Poor", "Improved", "Excellent", "Poor")
+factor(status, order=TRUE, levels=c("Poor", "Improved", "Excellent"))
+```
+
+```{r}
+sex <- c(1, 2, 1, 1, 1, 0)
+factor(sex, levels=c(1, 2), labels=c("Male", "Female"))
+```
+
+```{r}
+patientID <- c(1, 2, 3, 4)
+age <- c(25, 34, 28, 52)
+diabetes <- c("Type1", "Type2", "Type1", "Type1")
+status <- c("Poor", "Improved", "Excellent", "Poor")
+diabetes <- factor(diabetes)
+status <- factor(status, order=TRUE)
+patientdata <- data.frame(patientID, age, diabetes, status)
+str(patientdata)
+summary(patientdata)
+```
+
+### list
+
+```{r}
+g <- "My First List"
+h <- c(25, 26, 18, 39)
+j <- matrix(1:10, nrow=5)
+k <- c("one", "two", "three")
+mylist <- list(title=g, ages=h, j, k)
+mylist
+```
+```{r}
+mylist[[2]]
+mylist[["ages"]]
+mylist$age
+```
+
+```{r}
+x <- c(8, 6, 4)
+x[7] <- 10
+x
+```
+
+### data input
+
+```{r}
+# edit()
+mydata <- data.frame(age=numeric(0), gender=character(0), weight=numeric(0))
+mydata <- edit(mydata)
+```
+```{r}
+mydata
+```
+
+```{r}
+# read.table() function
+
+mydatatxt <- "
+age gender weight
+25 m 166
+30 f 115
+18 f 120
+"
+mydata <- read.table(header=TRUE, text=mydatatxt)
+```
+
+```{r}
+mydata
+```
+
+## 1.3 Getting started with graphs
+
+### simple examples
+
+```{r}
+dose <- c(20, 30, 40, 45, 60)
+drugA <- c(16, 20, 27, 40, 60)
+drugB <- c(15, 18, 25, 31, 40)
+
+plot(dose, drugA, type="b")
+# type="b" means both plot and line should be plotted
+```
+
+```{r}
+# copy the current setting
+opar <- par(no.readonly=TRUE)
+# change line type and point character
+par(lty=2, pch=17)
+plot(dose, drugA, type="b")
+# reset the setting to the original
+par(opar)
+```
+
+```{r}
+plot(dose, drugA, type="b", lty=3, lwd=3, pch=15, cex=2)
+```
+
+### color
+
+```{r}
+library(RColorBrewer)
+n <- 7
+mycolors <- brewer.pal(n, "Set1")
+barplot(rep(1, n), col=mycolors)
+```
+
+```{r}
+n <- 10
+mycolors <- rainbow(n)
+pie(rep(1, n), labels=mycolors, col=mycolors)
+mygrays <- gray(0:n/n)
+pie(rep(1, n), labels=mygrays, col=mygrays)
+```
+
+### text characteristics
+
+```{r}
+par(font.lab=3, cex.lab=1.5, font.main=4, cex.main=2)
+```
+
+### Graph and margin dimentions
+
+
+
+
+
+
